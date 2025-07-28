@@ -104,15 +104,6 @@ const InstallationReport = () => {
       return;
     }
     
-    if (formData.serialNumbers.length >= 100) {
-      toast({
-        title: "Maximum Limit Reached",
-        description: "Cannot add more than 100 serial numbers",
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Validate against IFP quantity
     const ifpQty = parseInt(formData.totalIFPQty) || 0;
     if (ifpQty > 0 && formData.serialNumbers.length >= ifpQty) {
@@ -123,6 +114,7 @@ const InstallationReport = () => {
       });
       return;
     }
+
     
     setFormData({
       ...formData,
@@ -161,7 +153,7 @@ const InstallationReport = () => {
       const ifpQty = parseInt(formData.totalIFPQty) || 0;
       const isWithinLimit = ifpQty === 0 || formData.serialNumbers.length < ifpQty;
       
-      if (serialValue && !isDuplicate && formData.serialNumbers.length < 100 && isWithinLimit) {
+      if (serialValue && !isDuplicate && isWithinLimit) {
         setFormData(prev => ({
           ...prev,
           serialNumbers: [...prev.serialNumbers, { serial: serialValue }],
@@ -458,7 +450,7 @@ const InstallationReport = () => {
         <Card className="mb-6">
           <CardHeader>
            <CardTitle className="text-lg bg-indigo-100 px-4 py-2 rounded">
-            Interactive Flat Panel Device (IFPD) Serial Numbers ({formData.serialNumbers.length}/100)
+            Interactive Flat Panel Device (IFPD) Serial Numbers ({formData.serialNumbers.length}/{parseInt(formData.totalIFPQty) || 0})
            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -490,7 +482,6 @@ const InstallationReport = () => {
                 type="button"
                 onClick={addSerialNumber}
                 disabled={
-                  formData.serialNumbers.length >= 100 || 
                   !formData.currentSerial.trim() ||
                   (parseInt(formData.totalIFPQty) > 0 && formData.serialNumbers.length >= parseInt(formData.totalIFPQty))
                 }
@@ -511,6 +502,7 @@ const InstallationReport = () => {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-3 bg-gray-100 rounded-md"
         >
           <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">#{index + 1}</span>
             <span className="font-semibold">{typeof item === 'string' ? item : item.serial}</span>
             <Button
               type="button"
