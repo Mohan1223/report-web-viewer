@@ -21,6 +21,7 @@ const InstallationReport = () => {
     schoolName: "",
     spocName: "",
     schoolAddress: "",
+    salesOrderNo: "",
     totalIFPQty: "",
     serialNumbers: [] as { serial: string; image?: string }[],
     currentSerial: "",
@@ -42,7 +43,6 @@ const InstallationReport = () => {
     mobileNumber: "",
     otp: "",
     agreement: false,
-    installationImage: null,
   };
 
   const [formData, setFormData, clearSavedData] = useFormPersistence(initialFormData);
@@ -93,7 +93,9 @@ const InstallationReport = () => {
       return;
     }
     
-    if (formData.serialNumbers.includes(serialValue)) {
+    if (formData.serialNumbers.some(item => 
+      typeof item === 'string' ? item === serialValue : item.serial === serialValue
+    )) {
       toast({
         title: "Duplicate Serial Number",
         description: "This serial number already exists",
@@ -106,6 +108,17 @@ const InstallationReport = () => {
       toast({
         title: "Maximum Limit Reached",
         description: "Cannot add more than 100 serial numbers",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate against IFP quantity
+    const ifpQty = parseInt(formData.totalIFPQty) || 0;
+    if (ifpQty > 0 && formData.serialNumbers.length >= ifpQty) {
+      toast({
+        title: "Quantity Limit Reached",
+        description: `Cannot add more than ${ifpQty} serial numbers (IFP quantity limit)`,
         variant: "destructive",
       });
       return;
@@ -142,15 +155,27 @@ const InstallationReport = () => {
     // Auto-add the scanned serial number
     setTimeout(() => {
       const serialValue = result.trim();
-      if (serialValue && !formData.serialNumbers.includes(serialValue) && formData.serialNumbers.length < 100) {
+      const isDuplicate = formData.serialNumbers.some(item => 
+        typeof item === 'string' ? item === serialValue : item.serial === serialValue
+      );
+      const ifpQty = parseInt(formData.totalIFPQty) || 0;
+      const isWithinLimit = ifpQty === 0 || formData.serialNumbers.length < ifpQty;
+      
+      if (serialValue && !isDuplicate && formData.serialNumbers.length < 100 && isWithinLimit) {
         setFormData(prev => ({
           ...prev,
-          serialNumbers: [...prev.serialNumbers, serialValue],
+          serialNumbers: [...prev.serialNumbers, { serial: serialValue }],
           currentSerial: "",
         }));
         toast({
           title: "Serial Number Scanned & Added",
           description: `Serial number ${serialValue} scanned and added successfully`,
+        });
+      } else if (!isWithinLimit) {
+        toast({
+          title: "Quantity Limit Reached",
+          description: `Cannot add more than ${ifpQty} serial numbers (IFP quantity limit)`,
+          variant: "destructive",
         });
       }
     }, 100);
@@ -162,25 +187,6 @@ const InstallationReport = () => {
     });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({
-          title: "File Too Large",
-          description: "Please select an image smaller than 5MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFormData({ ...formData, installationImage: e.target?.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const updateAccessory = (key: string, checked: boolean) => {
     setFormData({
@@ -417,6 +423,25 @@ const InstallationReport = () => {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="salesOrderNo">Sales Order NO:</Label>
+                <Input
+                  id="salesOrderNo"
+                  value={formData.salesOrderNo}
+                  onChange={(e) => setFormData({ ...formData, salesOrderNo: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="totalIFPQty">Total IFP Installed Qty:</Label>
+                <Input
+                  id="totalIFPQty"
+                  type="number"
+                  value={formData.totalIFPQty}
+                  onChange={(e) => setFormData({ ...formData, totalIFPQty: e.target.value })}
+                />
+              </div>
+            </div>
             <div>
               <Label htmlFor="schoolAddress">School Address:</Label>
               <Textarea
@@ -424,15 +449,6 @@ const InstallationReport = () => {
                 value={formData.schoolAddress}
                 onChange={(e) => setFormData({ ...formData, schoolAddress: e.target.value })}
                 rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="totalIFPQty">Total IFP Installed Qty:</Label>
-              <Input
-                id="totalIFPQty"
-                type="number"
-                value={formData.totalIFPQty}
-                onChange={(e) => setFormData({ ...formData, totalIFPQty: e.target.value })}
               />
             </div>
           </CardContent>
@@ -473,7 +489,11 @@ const InstallationReport = () => {
               <Button
                 type="button"
                 onClick={addSerialNumber}
-                disabled={formData.serialNumbers.length >= 100 || !formData.currentSerial.trim()}
+                disabled={
+                  formData.serialNumbers.length >= 100 || 
+                  !formData.currentSerial.trim() ||
+                  (parseInt(formData.totalIFPQty) > 0 && formData.serialNumbers.length >= parseInt(formData.totalIFPQty))
+                }
                 className="flex-shrink-0"
               >
                 Add
@@ -507,10 +527,20 @@ const InstallationReport = () => {
           <div className="flex flex-col sm:flex-row items-center gap-2">
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,capture=camera"
+              capture="environment"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
+
+                if (file.size > 5 * 1024 * 1024) {
+                  toast({
+                    title: "File Too Large",
+                    description: "Please select an image smaller than 5MB",
+                    variant: "destructive",
+                  });
+                  return;
+                }
 
                 const reader = new FileReader();
                 reader.onload = (event) => {
@@ -524,13 +554,38 @@ const InstallationReport = () => {
                 };
                 reader.readAsDataURL(file);
               }}
+              className="hidden"
+              id={`camera-${index}`}
             />
+            <label
+              htmlFor={`camera-${index}`}
+              className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              📷 {typeof item !== 'string' && item.image ? 'Change' : 'Add'} Photo
+            </label>
             {typeof item !== 'string' && item.image && (
-              <img
-                src={item.image}
-                alt="Installation"
-                className="w-20 h-20 object-cover rounded border"
-              />
+              <div className="flex flex-col items-center gap-1">
+                <img
+                  src={item.image}
+                  alt="Installation"
+                  className="w-16 h-16 object-cover rounded border"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const updated = [...formData.serialNumbers];
+                    if (typeof updated[index] !== 'string') {
+                      delete updated[index].image;
+                    }
+                    setFormData({ ...formData, serialNumbers: updated });
+                  }}
+                  className="text-xs text-destructive hover:bg-destructive/20 p-1 h-auto"
+                >
+                  Remove
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -784,55 +839,6 @@ const InstallationReport = () => {
               </div>
             </div>
 
-            {/* Installation Completion Image */}
-            <div>
-              <Label className="text-base font-medium flex items-center gap-2 mb-3">
-                📷 Installation Completion Image
-              </Label>
-              
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-                <div className="text-center">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    id="installation-image"
-                  />
-                  <label
-                    htmlFor="installation-image"
-                    className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    📷 Choose Image
-                  </label>
-                  <p className="text-xs text-gray-600 mt-2">
-                    Upload a photo of the completed installation (Max 5MB)
-                  </p>
-                </div>
-                
-                {formData.installationImage && (
-                  <div className="mt-4">
-                    <img
-                      src={formData.installationImage}
-                      alt="Installation completion"
-                      className="max-w-full h-auto rounded-lg border"
-                      style={{ maxHeight: '200px' }}
-                    />
-                    <div className="flex justify-center mt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setFormData({ ...formData, installationImage: null })}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        Remove Image
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* Mobile OTP Verification Section */}
             <div className="border-t pt-6">
