@@ -277,34 +277,59 @@ const InstallationReport = () => {
   };
 
   // Digital Signature Functions
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    
+    const rect = canvas.getBoundingClientRect();
+    
+    if ('touches' in e) {
+      // Touch event
+      const touch = e.touches[0] || e.changedTouches[0];
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top
+      };
+    } else {
+      // Mouse event
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevent scrolling on touch devices
     const canvas = canvasRef.current;
     if (!canvas) return;
     
     setIsDrawing(true);
-    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
+    const coords = getCoordinates(e);
     ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.moveTo(coords.x, coords.y);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // Prevent scrolling on touch devices
     if (!isDrawing) return;
     
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    const coords = getCoordinates(e);
+    ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e?: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (e) e.preventDefault();
     if (!isDrawing) return;
     setIsDrawing(false);
     
@@ -312,12 +337,30 @@ const InstallationReport = () => {
     if (!canvas) return;
     
     const signatureData = canvas.toDataURL();
-    setSignatureState({
-      isSigned: true,
-      signatureData: signatureData,
+    
+    // Only mark as signed if there's actual drawing content
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const hasDrawing = imageData.data.some((value, index) => {
+      // Check alpha channel (every 4th value) - if any pixel is not transparent, there's drawing
+      return index % 4 === 3 && value > 0;
     });
     
-    setFormData({ ...formData, digitalSignature: signatureData });
+    if (hasDrawing) {
+      setSignatureState({
+        isSigned: true,
+        signatureData: signatureData,
+      });
+      
+      setFormData({ ...formData, digitalSignature: signatureData });
+      
+      toast({
+        title: "Signature Added",
+        description: "Digital signature captured successfully",
+      });
+    }
   };
 
   const clearSignature = () => {
@@ -801,6 +844,9 @@ const InstallationReport = () => {
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
                   onMouseLeave={stopDrawing}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDrawing}
                   className="border border-gray-400 rounded bg-white cursor-crosshair w-full max-w-md mx-auto block"
                   style={{ touchAction: 'none' }}
                 />
