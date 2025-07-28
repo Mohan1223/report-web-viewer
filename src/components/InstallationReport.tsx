@@ -332,35 +332,43 @@ const InstallationReport = () => {
     if (e) e.preventDefault();
     if (!isDrawing) return;
     setIsDrawing(false);
-    
+  };
+
+  const saveSignature = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const signatureData = canvas.toDataURL();
-    
-    // Only mark as signed if there's actual drawing content
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
+    // Check if there's actual drawing content
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const hasDrawing = imageData.data.some((value, index) => {
       // Check alpha channel (every 4th value) - if any pixel is not transparent, there's drawing
       return index % 4 === 3 && value > 0;
     });
     
-    if (hasDrawing) {
-      setSignatureState({
-        isSigned: true,
-        signatureData: signatureData,
-      });
-      
-      setFormData({ ...formData, digitalSignature: signatureData });
-      
+    if (!hasDrawing) {
       toast({
-        title: "Signature Added",
-        description: "Digital signature captured successfully",
+        title: "No Signature Found",
+        description: "Please draw your signature before saving",
+        variant: "destructive",
       });
+      return;
     }
+    
+    const signatureData = canvas.toDataURL();
+    setSignatureState({
+      isSigned: true,
+      signatureData: signatureData,
+    });
+    
+    setFormData({ ...formData, digitalSignature: signatureData });
+    
+    toast({
+      title: "Signature Saved",
+      description: "Digital signature saved successfully",
+    });
   };
 
   const clearSignature = () => {
@@ -861,6 +869,16 @@ const InstallationReport = () => {
                   >
                     <RotateCcwIcon className="h-4 w-4" />
                     Clear Signature
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={saveSignature}
+                    disabled={signatureState.isSigned}
+                    className="flex items-center gap-2"
+                    size="sm"
+                  >
+                    <PenToolIcon className="h-4 w-4" />
+                    {signatureState.isSigned ? "Signature Saved" : "Save Signature"}
                   </Button>
                 </div>
                 
