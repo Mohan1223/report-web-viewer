@@ -64,22 +64,22 @@ const InstallationReport = () => {
   });
 
   const quickCheckItems = [
-    "No Physical damage Screen, Frame, ports, and look perfect.",
-    "Power On/Off: Powers up and down easily with its main button.",
-    "Screen Correctly: Shows the right home screen without errors.",
-    "Sound Works: Speakers are clear (play something!).",
-    "Clean Screen: No spots, colored dots, or lines.",
-    "Touch Works Everywhere: Touch and register accurately all over (corners, edges, center).",
-    "Multi-Touch Works: Support for multi-finger touching, painting may vary.",
-    "Stylus Works: Real pen & stylus work.",
-    "Touch Feel Fast: No lag when touching or dragging.",
-    "Pen Works: Writing pen works accurately with both ends.",
-    "Whiteboard App Works: Built-in app opens, draws, saves, and loads correctly.",
-    "Internet Connection: Shows WiFi as good or cable as online.",
-    "Basic Swipe: User show how to turn on/off, change inputs, adjust volume, and draw.",
-    "Paperwork Given: User manuals, warranty info, and contact details provided.",
-    "Remote Works: Remote control functions properly.",
-    "Antennas On: Wi-Fi antennas are securely attached."
+     "No Physical Damage?",
+  "Powers On/Off Easily?",
+  "Displays Home Screen Correctly?",
+  "Speakers Work Clearly?",
+  "Screen Is Clean (no spots or lines)?",
+  "Touch Works Everywhere?",
+  "Multi‑Touch Responds Properly?",
+  "Stylus Functioning?",
+  "No Lag in Touch/Drag?",
+  "Pen Writes Accurately?",
+  "Whiteboard App Opens & Saves?",
+  "Internet Connection OK (Wi‑Fi/Cable)?",
+  "Basic Controls Work (power, input, volume, draw)?",
+  "Manuals & Warranty Info Provided?",
+  "Remote Control Functions?",
+  "Antennas Securely Attached?",
   ];
 
   const addSerialNumber = () => {
@@ -759,29 +759,44 @@ const InstallationReport = () => {
 
         {/* Quick Check */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg bg-table-header px-4 py-2 rounded">
-              Interactive Display Quick Check
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {quickCheckItems.map((item, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  <Checkbox
-                    id={`check-${index}`}
-                    checked={formData.quickCheck[index]}
-                    onCheckedChange={(checked) => updateQuickCheck(index, checked as boolean)}
-                    className="mt-1"
-                  />
-                  <Label htmlFor={`check-${index}`} className="text-sm leading-5">
-                    <span className="font-medium">{index + 1}.</span> {item}
-                  </Label>
-                </div>
-              ))}
+  <CardHeader>
+    <CardTitle className="text-lg bg-table-header px-4 py-2 rounded">
+      Interactive Display Quick Check
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="grid grid-cols-1 md:grid-cols-2 relative gap-8">
+      {/* Vertical divider */}
+      <div className="hidden md:block absolute left-1/2 top-0 h-full w-px bg-gray-300" />
+
+      {quickCheckItems.map((item, index) => (
+        <div key={index} className="flex items-center justify-between gap-4">
+          <Label htmlFor={`quickcheck-${index}`} className="text-sm font-medium w-2/3 pr-2 flex items-center gap-2">
+            <span className="text-primary">★</span> {/* Or use ● for bullet */}
+            <span>{item}</span>
+          </Label>
+
+          <RadioGroup
+            id={`quickcheck-${index}`}
+            value={formData.quickCheck[index] ? "yes" : "no"}
+            onValueChange={(value) => updateQuickCheck(index, value === "yes")}
+            className="flex gap-4"
+          >
+            <div className="flex items-center space-x-1">
+              <RadioGroupItem value="yes" id={`yes-${index}`} />
+              <Label htmlFor={`yes-${index}`}>Yes</Label>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center space-x-1">
+              <RadioGroupItem value="no" id={`no-${index}`} />
+              <Label htmlFor={`no-${index}`}>No</Label>
+            </div>
+          </RadioGroup>
+        </div>
+      ))}
+    </div>
+  </CardContent>
+</Card>
+
 
         {/* Engineer Information */}
         <Card className="mb-6">
