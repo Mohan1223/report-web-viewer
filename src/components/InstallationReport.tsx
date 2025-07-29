@@ -369,6 +369,27 @@ const InstallationReport = () => {
     setFormData({ ...formData, digitalSignature: "" });
   };
 
+  const editSignature = () => {
+    setSignatureDialogOpen(true);
+    // Load existing signature if available
+    setTimeout(() => {
+      if (signatureState.signatureData && canvasRef.current) {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        const img = new Image();
+        img.onload = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = signatureState.signatureData;
+      }
+    }, 100);
+  };
+
   const handleSubmitReport = () => {
     // Validate required fields
     if (!formData.agreement) {
@@ -829,21 +850,49 @@ const InstallationReport = () => {
               </Label>
               
               <div className="space-y-4">
-                {signatureState.isSigned ? (
-                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2Icon className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-green-800">Signature captured successfully</span>
+                 {signatureState.isSigned ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2Icon className="h-5 w-5 text-green-600" />
+                        <span className="font-medium text-green-800">Signature captured successfully</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={editSignature}
+                        className="border-green-300 text-green-700 hover:bg-green-100"
+                      >
+                        <PenToolIcon className="h-4 w-4 mr-1" />
+                        Edit Signature
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSignatureDialogOpen(true)}
-                      className="border-green-300 text-green-700 hover:bg-green-100"
-                    >
-                      View / Edit Signature
-                    </Button>
+                    
+                    {/* Signature Preview */}
+                    <div className="border border-input rounded-lg p-4 bg-white">
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Signature Preview:</p>
+                      <div className="border border-gray-200 rounded bg-gray-50 p-2 flex justify-center">
+                        <img 
+                          src={signatureState.signatureData} 
+                          alt="Digital Signature" 
+                          className="max-w-full h-auto rounded"
+                          style={{ maxHeight: '100px' }}
+                        />
+                      </div>
+                      <div className="flex justify-center mt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={clearSignature}
+                          className="text-destructive border-destructive hover:bg-destructive/10"
+                        >
+                          <RotateCcwIcon className="h-4 w-4 mr-1" />
+                          Remove Signature
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center p-6 border-2 border-dashed border-muted rounded-lg bg-muted/30">
@@ -856,13 +905,13 @@ const InstallationReport = () => {
                           Add Digital Signature
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2">
-                            <PenToolIcon className="h-5 w-5" />
-                            Digital Signature
-                          </DialogTitle>
-                        </DialogHeader>
+                       <DialogContent className="max-w-2xl">
+                         <DialogHeader>
+                           <DialogTitle className="flex items-center gap-2">
+                             <PenToolIcon className="h-5 w-5" />
+                             {signatureState.isSigned ? 'Edit Digital Signature' : 'Add Digital Signature'}
+                           </DialogTitle>
+                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="border-2 border-dashed border-muted rounded-lg p-6 bg-muted/30">
                             <canvas
