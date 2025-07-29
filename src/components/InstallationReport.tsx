@@ -6,7 +6,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, PrinterIcon, DownloadIcon, PhoneIcon, ShieldCheckIcon, PenToolIcon, RotateCcwIcon, MailIcon, ScanLine } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { CalendarIcon, PrinterIcon, DownloadIcon, PhoneIcon, ShieldCheckIcon, PenToolIcon, RotateCcwIcon, MailIcon, ScanLine, CheckCircle2Icon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { useFormPersistence } from "@/hooks/useFormPersistence";
@@ -63,6 +64,8 @@ const InstallationReport = () => {
     isOpen: false,
   });
 
+  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+
   const quickCheckItems = [
      "No Physical Damage?",
   "Powers On/Off Easily?",
@@ -82,51 +85,7 @@ const InstallationReport = () => {
   "Antennas Securely Attached?",
   ];
 
-  const addSerialNumber = () => {
-    const serialValue = formData.currentSerial.trim();
-    if (!serialValue) {
-      toast({
-        title: "Empty Serial Number",
-        description: "Please enter a serial number",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (formData.serialNumbers.some(item => 
-      typeof item === 'string' ? item === serialValue : item.serial === serialValue
-    )) {
-      toast({
-        title: "Duplicate Serial Number",
-        description: "This serial number already exists",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Validate against IFP quantity
-    const ifpQty = parseInt(formData.totalIFPQty) || 0;
-    if (ifpQty > 0 && formData.serialNumbers.length >= ifpQty) {
-      toast({
-        title: "Quantity Limit Reached",
-        description: `Cannot add more than ${ifpQty} serial numbers (IFP quantity limit)`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    
-    setFormData({
-      ...formData,
-      serialNumbers: [...formData.serialNumbers, { serial: serialValue }],
-      currentSerial: "",
-    });
-    
-    toast({
-      title: "Serial Number Added",
-      description: `Serial number ${serialValue} added successfully`,
-    });
-  };
+  // Manual serial number addition removed - only scanning allowed
 
   const removeSerialNumber = (index: number) => {
     const newSerialNumbers = formData.serialNumbers.filter((_, i) => i !== index);
@@ -365,6 +324,9 @@ const InstallationReport = () => {
     
     setFormData({ ...formData, digitalSignature: signatureData });
     
+    // Close the dialog after saving
+    setSignatureDialogOpen(false);
+    
     toast({
       title: "Signature Saved",
       description: "Digital signature saved successfully",
@@ -417,34 +379,35 @@ const InstallationReport = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background py-8 px-4">
+      <div className="max-w-4xl mx-auto animate-fade-in">
         {/* Header */}
-        <Card className="mb-6">
-          <CardHeader className="text-center bg-primary text-primary-foreground">
-            <div className="flex justify-between items-center">
-              <div className="text-2xl font-bold">LEAD</div>
+        <Card className="mb-6 shadow-card border-0 overflow-hidden">
+          <CardHeader className="text-center bg-gradient-primary text-primary-foreground relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-black/10 to-transparent" />
+            <div className="relative flex justify-between items-center">
+              <div className="text-3xl font-bold tracking-wider">LEAD</div>
               <div className="text-right">
-                <div className="text-sm">Installation Date:</div>
+                <div className="text-sm opacity-90">Installation Date:</div>
                 <Input
                   type="date"
                   value={formData.installationDate}
                   onChange={(e) => setFormData({ ...formData, installationDate: e.target.value })}
-                  className="bg-white text-foreground mt-1"
+                  className="bg-white/95 text-foreground mt-1 border-0"
                 />
               </div>
             </div>
-            <CardTitle className="text-xl mt-4">
+            <CardTitle className="text-2xl mt-6 font-semibold tracking-wide relative">
               IFPD - INSTALLATION SIGN-OFF FORM
             </CardTitle>
           </CardHeader>
         </Card>
 
         {/* School Information */}
-        <Card className="mb-6">
+        <Card className="mb-6 shadow-card border-0">
           <CardHeader>
-            <CardTitle className="text-lg bg-table-header px-4 py-2 rounded">
-              School Information
+            <CardTitle className="text-lg bg-gradient-secondary px-6 py-3 rounded-lg font-semibold text-secondary">
+              🏫 School Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -498,47 +461,34 @@ const InstallationReport = () => {
         </Card>
 
         {/* Serial Numbers */}
-        <Card className="mb-6">
+        <Card className="mb-6 shadow-card border-0">
           <CardHeader>
-           <CardTitle className="text-lg bg-indigo-100 px-4 py-2 rounded">
-            Interactive Flat Panel Device (IFPD) Serial Numbers ({formData.serialNumbers.length}/{parseInt(formData.totalIFPQty) || 0})
+           <CardTitle className="text-lg bg-gradient-secondary px-6 py-3 rounded-lg font-semibold text-secondary">
+            📱 Interactive Flat Panel Device (IFPD) Serial Numbers ({formData.serialNumbers.length}/{parseInt(formData.totalIFPQty) || 0})
            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Serial Number Input */}
-            <div className="flex items-center gap-2">
-              <Input
-                value={formData.currentSerial}
-                onChange={(e) => setFormData({ ...formData, currentSerial: e.target.value })}
-                placeholder="Enter or scan serial number"
-                className="flex-1"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addSerialNumber();
-                  }
-                }}
-              />
+            {/* Serial Number Input - Scan Only */}
+            <div className="text-center space-y-6">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6">
+                <div className="flex items-center justify-center gap-3 text-amber-800 mb-3">
+                  <div className="p-2 bg-amber-200 rounded-full">
+                    <ScanLine className="h-6 w-6" />
+                  </div>
+                  <span className="font-bold text-lg">Scan Required</span>
+                </div>
+                <p className="text-amber-700 font-medium">
+                  🔒 For accuracy and data integrity, serial numbers can only be added by scanning the barcode.
+                </p>
+              </div>
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
                 onClick={openScanner}
-                className="flex-shrink-0"
-                title="Scan Barcode"
+                className="w-full max-w-lg mx-auto flex items-center gap-3 bg-gradient-primary hover:opacity-90 transition-all duration-300 transform hover:scale-105"
+                size="lg"
               >
-                <ScanLine className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                onClick={addSerialNumber}
-                disabled={
-                  !formData.currentSerial.trim() ||
-                  (parseInt(formData.totalIFPQty) > 0 && formData.serialNumbers.length >= parseInt(formData.totalIFPQty))
-                }
-                className="flex-shrink-0"
-              >
-                Add
+                <ScanLine className="h-6 w-6" />
+                <span className="font-semibold">Scan Serial Number Barcode</span>
               </Button>
             </div>
 
@@ -641,10 +591,10 @@ const InstallationReport = () => {
         </Card>
 
         {/* Installation Details */}
-        <Card className="mb-6">
+        <Card className="mb-6 shadow-card border-0">
           <CardHeader>
-            <CardTitle className="text-lg bg-table-header px-4 py-2 rounded">
-              Installation Details
+            <CardTitle className="text-lg bg-gradient-secondary px-6 py-3 rounded-lg font-semibold text-secondary">
+              🔧 Installation Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -858,55 +808,86 @@ const InstallationReport = () => {
                 Digital Signature (Required)
               </Label>
               
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-                <canvas
-                  ref={canvasRef}
-                  width={400}
-                  height={150}
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                  onTouchStart={startDrawing}
-                  onTouchMove={draw}
-                  onTouchEnd={stopDrawing}
-                  className="border border-gray-400 rounded bg-white cursor-crosshair w-full max-w-md mx-auto block"
-                  style={{ touchAction: 'none' }}
-                />
-                
-                <div className="flex justify-center gap-3 mt-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={clearSignature}
-                    className="flex items-center gap-2"
-                  >
-                    <RotateCcwIcon className="h-4 w-4" />
-                    Clear Signature
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={saveSignature}
-                    disabled={signatureState.isSigned}
-                    className="flex items-center gap-2"
-                    size="sm"
-                  >
-                    <PenToolIcon className="h-4 w-4" />
-                    {signatureState.isSigned ? "Signature Saved" : "Save Signature"}
-                  </Button>
-                </div>
-                
-                {signatureState.isSigned && (
-                  <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded-md mt-3">
-                    <PenToolIcon className="h-4 w-4" />
-                    <span className="text-sm font-medium">Signature captured successfully</span>
+              <div className="space-y-4">
+                {signatureState.isSigned ? (
+                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2Icon className="h-5 w-5 text-green-600" />
+                      <span className="font-medium text-green-800">Signature captured successfully</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSignatureDialogOpen(true)}
+                      className="border-green-300 text-green-700 hover:bg-green-100"
+                    >
+                      View / Edit Signature
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center p-6 border-2 border-dashed border-muted rounded-lg bg-muted/30">
+                    <PenToolIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground mb-4">No signature added yet</p>
+                    <Dialog open={signatureDialogOpen} onOpenChange={setSignatureDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90">
+                          <PenToolIcon className="h-4 w-4 mr-2" />
+                          Add Digital Signature
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            <PenToolIcon className="h-5 w-5" />
+                            Digital Signature
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="border-2 border-dashed border-muted rounded-lg p-6 bg-muted/30">
+                            <canvas
+                              ref={canvasRef}
+                              width={600}
+                              height={200}
+                              onMouseDown={startDrawing}
+                              onMouseMove={draw}
+                              onMouseUp={stopDrawing}
+                              onMouseLeave={stopDrawing}
+                              onTouchStart={startDrawing}
+                              onTouchMove={draw}
+                              onTouchEnd={stopDrawing}
+                              className="border border-input rounded bg-card cursor-crosshair w-full block"
+                              style={{ touchAction: 'none' }}
+                            />
+                            <p className="text-xs text-muted-foreground mt-2 text-center">
+                              Sign above using your mouse, stylus, or finger
+                            </p>
+                          </div>
+                          
+                          <div className="flex justify-center gap-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={clearSignature}
+                              className="flex items-center gap-2"
+                            >
+                              <RotateCcwIcon className="h-4 w-4" />
+                              Clear
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={saveSignature}
+                              className="flex items-center gap-2 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+                            >
+                              <CheckCircle2Icon className="h-4 w-4" />
+                              Save Signature
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 )}
-                
-                <p className="text-xs text-gray-600 mt-2 text-center">
-                  Please sign above using your mouse or touch screen
-                </p>
               </div>
             </div>
 
