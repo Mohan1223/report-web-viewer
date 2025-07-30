@@ -578,7 +578,7 @@ const InstallationReport = () => {
               </div>
             </div>
             <CardTitle className="text-2xl mt-6 font-semibold tracking-wide relative">
-              IFPD - INSTALLATION SIGN-OFF FORM
+              INSTALLATION SIGN-OFF FORM
             </CardTitle>
           </CardHeader>
         </Card>
@@ -653,16 +653,16 @@ const InstallationReport = () => {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="totalIFPQty">Total IFP Installed Qty:</Label>
-                      <Input
-                        id="totalIFPQty"
-                        type="number"
-                        value={formData.totalIFPQty}
-                        onChange={(e) => setFormData({ ...formData, totalIFPQty: e.target.value })}
-                        className="bg-white"
-                      />
-                    </div>
+                     <div>
+                       <Label htmlFor="totalIFPQty">Total TV & IFPD Installed Qty:</Label>
+                       <Input
+                         id="totalIFPQty"
+                         type="number"
+                         value={formData.totalIFPQty}
+                         onChange={(e) => setFormData({ ...formData, totalIFPQty: e.target.value })}
+                         className="bg-white"
+                       />
+                     </div>
                     <div></div>
                   </div>
                   
@@ -693,7 +693,7 @@ const InstallationReport = () => {
         <Card className="mb-6 shadow-card border-0">
           <CardHeader>
            <CardTitle className="text-lg bg-gradient-secondary px-6 py-3 rounded-lg font-semibold text-secondary">
-            📱 Interactive Flat Panel Device (IFPD) Serial Numbers ({formData.serialNumbers.length}/{parseInt(formData.totalIFPQty) || 0})
+             📱 TV & IFPD Serial Numbers ({formData.serialNumbers.length}/{parseInt(formData.totalIFPQty) || 0})
            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -747,127 +747,130 @@ const InstallationReport = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2">
-            {/* Camera Input */}
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
+            {/* Single Image Upload - Camera or Gallery */}
+            {(typeof item !== 'string' && !item.image) || (typeof item === 'string') ? (
+              <>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
 
-                try {
-                  let processedFile = file;
-                  
-                  // Compress image if over 5MB
-                  if (file.size > 5 * 1024 * 1024) {
-                    toast({
-                      title: "Compressing Image",
-                      description: "Large image detected, compressing...",
-                    });
-                    processedFile = await compressImage(file);
-                  }
+                    try {
+                      let processedFile = file;
+                      
+                      // Compress image if over 5MB
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast({
+                          title: "Compressing Image",
+                          description: "Large image detected, compressing...",
+                        });
+                        processedFile = await compressImage(file);
+                      }
 
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    const updated = [...formData.serialNumbers];
-                    if (typeof updated[index] === 'string') {
-                      updated[index] = { 
-                        serial: updated[index] as string, 
-                        image: event.target?.result as string,
-                        fileName: processedFile.name 
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const updated = [...formData.serialNumbers];
+                        if (typeof updated[index] === 'string') {
+                          updated[index] = { 
+                            serial: updated[index] as string, 
+                            image: event.target?.result as string,
+                            fileName: processedFile.name 
+                          };
+                        } else {
+                          updated[index].image = event.target?.result as string;
+                          updated[index].fileName = processedFile.name;
+                        }
+                        setFormData({ ...formData, serialNumbers: updated });
+                        
+                        toast({
+                          title: "Photo Added",
+                          description: `${processedFile.name} uploaded successfully`,
+                        });
                       };
-                    } else {
-                      updated[index].image = event.target?.result as string;
-                      updated[index].fileName = processedFile.name;
+                      reader.readAsDataURL(processedFile);
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to process image. Please try again.",
+                        variant: "destructive",
+                      });
                     }
-                    setFormData({ ...formData, serialNumbers: updated });
-                    
-                    toast({
-                      title: "Photo Added",
-                      description: `${processedFile.name} uploaded successfully`,
-                    });
-                  };
-                  reader.readAsDataURL(processedFile);
-                } catch (error) {
-                  toast({
-                    title: "Error",
-                    description: "Failed to process image. Please try again.",
-                    variant: "destructive",
-                  });
-                }
-              }}
-              className="hidden"
-              id={`camera-${index}`}
-            />
+                  }}
+                  className="hidden"
+                  id={`camera-${index}`}
+                />
 
-            {/* Gallery Input */}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
 
-                try {
-                  let processedFile = file;
-                  
-                  // Compress image if over 5MB
-                  if (file.size > 5 * 1024 * 1024) {
-                    toast({
-                      title: "Compressing Image",
-                      description: "Large image detected, compressing...",
-                    });
-                    processedFile = await compressImage(file);
-                  }
+                    try {
+                      let processedFile = file;
+                      
+                      // Compress image if over 5MB
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast({
+                          title: "Compressing Image",
+                          description: "Large image detected, compressing...",
+                        });
+                        processedFile = await compressImage(file);
+                      }
 
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    const updated = [...formData.serialNumbers];
-                    if (typeof updated[index] === 'string') {
-                      updated[index] = { 
-                        serial: updated[index] as string, 
-                        image: event.target?.result as string,
-                        fileName: processedFile.name 
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const updated = [...formData.serialNumbers];
+                        if (typeof updated[index] === 'string') {
+                          updated[index] = { 
+                            serial: updated[index] as string, 
+                            image: event.target?.result as string,
+                            fileName: processedFile.name 
+                          };
+                        } else {
+                          updated[index].image = event.target?.result as string;
+                          updated[index].fileName = processedFile.name;
+                        }
+                        setFormData({ ...formData, serialNumbers: updated });
+                        
+                        toast({
+                          title: "Photo Added",
+                          description: `${processedFile.name} uploaded successfully`,
+                        });
                       };
-                    } else {
-                      updated[index].image = event.target?.result as string;
-                      updated[index].fileName = processedFile.name;
+                      reader.readAsDataURL(processedFile);
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to process image. Please try again.",
+                        variant: "destructive",
+                      });
                     }
-                    setFormData({ ...formData, serialNumbers: updated });
-                    
-                    toast({
-                      title: "Photo Added",
-                      description: `${processedFile.name} uploaded successfully`,
-                    });
-                  };
-                  reader.readAsDataURL(processedFile);
-                } catch (error) {
-                  toast({
-                    title: "Error",
-                    description: "Failed to process image. Please try again.",
-                    variant: "destructive",
-                  });
-                }
-              }}
-              className="hidden"
-              id={`gallery-${index}`}
-            />
+                  }}
+                  className="hidden"
+                  id={`gallery-${index}`}
+                />
 
-            <div className="flex gap-2">
-              <label
-                htmlFor={`camera-${index}`}
-                className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                📷 Camera
-              </label>
-              <label
-                htmlFor={`gallery-${index}`}
-                className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                🖼️ Gallery
-              </label>
-            </div>
+                <div className="flex gap-2">
+                  <label
+                    htmlFor={`camera-${index}`}
+                    className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    📷 Camera
+                  </label>
+                  <label
+                    htmlFor={`gallery-${index}`}
+                    className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    🖼️ Gallery
+                  </label>
+                </div>
+              </>
+            ) : null}
 
             {typeof item !== 'string' && item.image && (
               <div className="flex items-center gap-2 text-sm">
