@@ -36,7 +36,7 @@ const InstallationReport = () => {
       touchCable: false,
       hdmiCable: false,
     },
-    quickCheck: Array(15).fill(false),
+    quickCheck: Array(15).fill(null),
     engineerName: "",
     engineerContact: "",
     schoolOwnerEmail: "",
@@ -222,9 +222,9 @@ const InstallationReport = () => {
     });
   };
 
-  const updateQuickCheck = (index: number, checked: boolean) => {
+  const updateQuickCheck = (index: number, value: boolean | null) => {
     const newQuickCheck = [...formData.quickCheck];
-    newQuickCheck[index] = checked;
+    newQuickCheck[index] = value;
     setFormData({ ...formData, quickCheck: newQuickCheck });
   };
 
@@ -894,8 +894,8 @@ const InstallationReport = () => {
 
           <RadioGroup
             id={`quickcheck-${index}`}
-            value={formData.quickCheck[index] ? "yes" : "no"}
-            onValueChange={(value) => updateQuickCheck(index, value === "yes")}
+            value={formData.quickCheck[index] === true ? "yes" : formData.quickCheck[index] === false ? "no" : ""}
+            onValueChange={(value) => updateQuickCheck(index, value === "yes" ? true : value === "no" ? false : null)}
             className="flex gap-4"
           >
             <div className="flex items-center space-x-1">
