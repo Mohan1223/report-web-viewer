@@ -24,7 +24,7 @@ const InstallationReport = () => {
     schoolAddress: "",
     salesOrderNo: "",
     totalIFPQty: "",
-    serialNumbers: [] as { serial: string; image?: string }[],
+    serialNumbers: [] as { serial: string; image?: string; fileName?: string }[],
     currentSerial: "",
     upsPresent: "",
     earthingRequired: "",
@@ -309,6 +309,69 @@ const InstallationReport = () => {
     });
     setFormData({ ...formData, otp: "" });
     sendOtp();
+  };
+
+  // Image compression utility
+  const compressImage = (file: File, maxSizeMB: number = 5): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas not supported'));
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        // Calculate new dimensions to reduce file size
+        let { width, height } = img;
+        const maxDimension = 1920; // Max dimension to keep quality reasonable
+        
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = (height * maxDimension) / width;
+            width = maxDimension;
+          } else {
+            width = (width * maxDimension) / height;
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Start with high quality and reduce until under size limit
+        let quality = 0.8;
+        const tryCompress = () => {
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('Compression failed'));
+              return;
+            }
+            
+            if (blob.size <= maxSizeMB * 1024 * 1024 || quality <= 0.1) {
+              // Create new file with compressed data
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              quality -= 0.1;
+              tryCompress();
+            }
+          }, 'image/jpeg', quality);
+        };
+        
+        tryCompress();
+      };
+      
+      img.onerror = () => reject(new Error('Image load failed'));
+      img.src = URL.createObjectURL(file);
+    });
   };
 
   // Digital Signature Functions
@@ -684,51 +747,133 @@ const InstallationReport = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2">
+            {/* Camera Input */}
             <input
               type="file"
-              accept="image/*,capture=camera"
+              accept="image/*"
               capture="environment"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
 
-                if (file.size > 5 * 1024 * 1024) {
+                try {
+                  let processedFile = file;
+                  
+                  // Compress image if over 5MB
+                  if (file.size > 5 * 1024 * 1024) {
+                    toast({
+                      title: "Compressing Image",
+                      description: "Large image detected, compressing...",
+                    });
+                    processedFile = await compressImage(file);
+                  }
+
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const updated = [...formData.serialNumbers];
+                    if (typeof updated[index] === 'string') {
+                      updated[index] = { 
+                        serial: updated[index] as string, 
+                        image: event.target?.result as string,
+                        fileName: processedFile.name 
+                      };
+                    } else {
+                      updated[index].image = event.target?.result as string;
+                      updated[index].fileName = processedFile.name;
+                    }
+                    setFormData({ ...formData, serialNumbers: updated });
+                    
+                    toast({
+                      title: "Photo Added",
+                      description: `${processedFile.name} uploaded successfully`,
+                    });
+                  };
+                  reader.readAsDataURL(processedFile);
+                } catch (error) {
                   toast({
-                    title: "File Too Large",
-                    description: "Please select an image smaller than 5MB",
+                    title: "Error",
+                    description: "Failed to process image. Please try again.",
                     variant: "destructive",
                   });
-                  return;
                 }
-
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                  const updated = [...formData.serialNumbers];
-                  if (typeof updated[index] === 'string') {
-                    updated[index] = { serial: updated[index] as string, image: event.target?.result as string };
-                  } else {
-                    updated[index].image = event.target?.result as string;
-                  }
-                  setFormData({ ...formData, serialNumbers: updated });
-                };
-                reader.readAsDataURL(file);
               }}
               className="hidden"
               id={`camera-${index}`}
             />
-            <label
-              htmlFor={`camera-${index}`}
-              className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              📷 {typeof item !== 'string' && item.image ? 'Change' : 'Add'} Photo
-            </label>
+
+            {/* Gallery Input */}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                try {
+                  let processedFile = file;
+                  
+                  // Compress image if over 5MB
+                  if (file.size > 5 * 1024 * 1024) {
+                    toast({
+                      title: "Compressing Image",
+                      description: "Large image detected, compressing...",
+                    });
+                    processedFile = await compressImage(file);
+                  }
+
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const updated = [...formData.serialNumbers];
+                    if (typeof updated[index] === 'string') {
+                      updated[index] = { 
+                        serial: updated[index] as string, 
+                        image: event.target?.result as string,
+                        fileName: processedFile.name 
+                      };
+                    } else {
+                      updated[index].image = event.target?.result as string;
+                      updated[index].fileName = processedFile.name;
+                    }
+                    setFormData({ ...formData, serialNumbers: updated });
+                    
+                    toast({
+                      title: "Photo Added",
+                      description: `${processedFile.name} uploaded successfully`,
+                    });
+                  };
+                  reader.readAsDataURL(processedFile);
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to process image. Please try again.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="hidden"
+              id={`gallery-${index}`}
+            />
+
+            <div className="flex gap-2">
+              <label
+                htmlFor={`camera-${index}`}
+                className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                📷 Camera
+              </label>
+              <label
+                htmlFor={`gallery-${index}`}
+                className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                🖼️ Gallery
+              </label>
+            </div>
+
             {typeof item !== 'string' && item.image && (
-              <div className="flex flex-col items-center gap-1">
-                <img
-                  src={item.image}
-                  alt="Installation"
-                  className="w-16 h-16 object-cover rounded border"
-                />
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-green-600 font-medium">
+                  📎 {item.fileName || 'image.jpg'}
+                </span>
                 <Button
                   type="button"
                   variant="ghost"
@@ -737,6 +882,7 @@ const InstallationReport = () => {
                     const updated = [...formData.serialNumbers];
                     if (typeof updated[index] !== 'string') {
                       delete updated[index].image;
+                      delete updated[index].fileName;
                     }
                     setFormData({ ...formData, serialNumbers: updated });
                   }}
