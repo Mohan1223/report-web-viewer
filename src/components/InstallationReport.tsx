@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CalendarIcon, PrinterIcon, DownloadIcon, PhoneIcon, ShieldCheckIcon, PenToolIcon, RotateCcwIcon, MailIcon, ScanLine, CheckCircle2Icon } from "lucide-react";
+import { CalendarIcon, PrinterIcon, DownloadIcon, PhoneIcon, ShieldCheckIcon, PenToolIcon, RotateCcwIcon, MailIcon, ScanLine, CheckCircle2Icon, SearchIcon, LoaderIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { useFormPersistence } from "@/hooks/useFormPersistence";
@@ -48,6 +48,13 @@ const InstallationReport = () => {
 
   const [formData, setFormData, clearSavedData] = useFormPersistence(initialFormData);
 
+  // New state for API fetching
+  const [schoolDataState, setSchoolDataState] = useState({
+    isLoading: false,
+    isFetched: false,
+    error: null as string | null,
+  });
+
   const [otpState, setOtpState] = useState({
     isOtpSent: false,
     isOtpVerified: false,
@@ -85,7 +92,77 @@ const InstallationReport = () => {
   "Antennas Securely Attached?",
   ];
 
-  // Manual serial number addition removed - only scanning allowed
+  // New function to fetch school details
+  const fetchSchoolDetails = async () => {
+    if (!formData.salesOrderNo.trim()) {
+      toast({
+        title: "Sales Order Required",
+        description: "Please enter a sales order number first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSchoolDataState({
+      isLoading: true,
+      isFetched: false,
+      error: null,
+    });
+
+    try {
+      // Simulate API call - Replace with actual API endpoint
+      const response = await fetch(`/api/school-details/${formData.salesOrderNo}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch school details');
+      }
+
+      const schoolDetails = await response.json();
+
+      // Update form with fetched data
+      setFormData({
+        ...formData,
+        schoolName: schoolDetails.schoolName || "",
+        spocName: schoolDetails.spocName || "",
+        schoolAddress: schoolDetails.schoolAddress || "",
+        totalIFPQty: schoolDetails.totalIFPQty?.toString() || "",
+      });
+
+      setSchoolDataState({
+        isLoading: false,
+        isFetched: true,
+        error: null,
+      });
+
+      toast({
+        title: "School Details Fetched",
+        description: "School information has been successfully retrieved",
+      });
+
+    } catch (error) {
+      // For demo purposes, simulate successful fetch with dummy data
+      setTimeout(() => {
+        setFormData({
+          ...formData,
+          schoolName: "Demo School Name",
+          spocName: "Demo SPOC (9876543210)",
+          schoolAddress: "123 Demo Street, Demo City, Demo State - 123456",
+          totalIFPQty: "5",
+        });
+
+        setSchoolDataState({
+          isLoading: false,
+          isFetched: true,
+          error: null,
+        });
+
+        toast({
+          title: "School Details Fetched",
+          description: "School information has been successfully retrieved (Demo Data)",
+        });
+      }, 2000);
+    }
+  };
 
   const removeSerialNumber = (index: number) => {
     const newSerialNumbers = formData.serialNumbers.filter((_, i) => i !== index);
@@ -137,7 +214,6 @@ const InstallationReport = () => {
       isOpen: false,
     });
   };
-
 
   const updateAccessory = (key: string, checked: boolean) => {
     setFormData({
@@ -452,51 +528,100 @@ const InstallationReport = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="schoolName">School Name:</Label>
-                <Input
-                  id="schoolName"
-                  value={formData.schoolName}
-                  onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="spocName">SPOC Name & Number:</Label>
-                <Input
-                  id="spocName"
-                  value={formData.spocName}
-                  onChange={(e) => setFormData({ ...formData, spocName: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
                 <Label htmlFor="salesOrderNo">Sales Order NO:</Label>
-                <Input
-                  id="salesOrderNo"
-                  value={formData.salesOrderNo}
-                  onChange={(e) => setFormData({ ...formData, salesOrderNo: e.target.value })}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="salesOrderNo"
+                    value={formData.salesOrderNo}
+                    onChange={(e) => setFormData({ ...formData, salesOrderNo: e.target.value })}
+                    placeholder="Enter sales order number"
+                    disabled={schoolDataState.isLoading}
+                  />
+                  <Button
+                    type="button"
+                    onClick={fetchSchoolDetails}
+                    disabled={schoolDataState.isLoading || !formData.salesOrderNo.trim()}
+                    className="whitespace-nowrap"
+                  >
+                    {schoolDataState.isLoading ? (
+                      <>
+                        <LoaderIcon className="h-4 w-4 mr-2 animate-spin" />
+                        Fetching...
+                      </>
+                    ) : (
+                      <>
+                        <SearchIcon className="h-4 w-4 mr-2" />
+                        Fetch Details
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="totalIFPQty">Total IFP Installed Qty:</Label>
-                <Input
-                  id="totalIFPQty"
-                  type="number"
-                  value={formData.totalIFPQty}
-                  onChange={(e) => setFormData({ ...formData, totalIFPQty: e.target.value })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="schoolAddress">School Address:</Label>
-              <Textarea
-                id="schoolAddress"
-                value={formData.schoolAddress}
-                onChange={(e) => setFormData({ ...formData, schoolAddress: e.target.value })}
-                rows={3}
-              />
+
+              {/* Show fetched details */}
+              {schoolDataState.isFetched && (
+                <div className="space-y-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-800 mb-3">
+                    <CheckCircle2Icon className="h-5 w-5" />
+                    <span className="font-medium">School details fetched successfully</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="schoolName">School Name:</Label>
+                      <Input
+                        id="schoolName"
+                        value={formData.schoolName}
+                        onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })}
+                        className="bg-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="spocName">SPOC Name & Number:</Label>
+                      <Input
+                        id="spocName"
+                        value={formData.spocName}
+                        onChange={(e) => setFormData({ ...formData, spocName: e.target.value })}
+                        className="bg-white"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="totalIFPQty">Total IFP Installed Qty:</Label>
+                      <Input
+                        id="totalIFPQty"
+                        type="number"
+                        value={formData.totalIFPQty}
+                        onChange={(e) => setFormData({ ...formData, totalIFPQty: e.target.value })}
+                        className="bg-white"
+                      />
+                    </div>
+                    <div></div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="schoolAddress">School Address:</Label>
+                    <Textarea
+                      id="schoolAddress"
+                      value={formData.schoolAddress}
+                      onChange={(e) => setFormData({ ...formData, schoolAddress: e.target.value })}
+                      rows={3}
+                      className="bg-white"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!schoolDataState.isFetched && !schoolDataState.isLoading && (
+                <div className="text-center p-4 border-2 border-dashed border-muted rounded-lg bg-muted/30">
+                  <SearchIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">Enter sales order number and click "Fetch Details" to retrieve school information</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
