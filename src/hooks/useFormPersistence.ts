@@ -11,7 +11,8 @@ export const useFormPersistence = <T>(initialData: T) => {
       const savedData = localStorage.getItem(STORAGE_KEY);
       if (savedData) {
         const parsedData = JSON.parse(savedData);
-        setData(parsedData);
+        // Merge saved data with initial data to ensure all properties exist
+        setData({ ...initialData, ...parsedData });
       }
     } catch (error) {
       console.error('Error loading data from localStorage:', error);
