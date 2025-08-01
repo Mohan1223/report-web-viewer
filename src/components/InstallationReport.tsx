@@ -666,8 +666,17 @@ const InstallationReport = () => {
                          className="bg-white"
                        />
                      </div>
-                    <div></div>
-                  </div>
+                     <div>
+                       <Label htmlFor="brandName">Brand Name:</Label>
+                       <Input
+                         id="brandName"
+                         value={formData.brandName}
+                         onChange={(e) => setFormData({ ...formData, brandName: e.target.value })}
+                         className="bg-white"
+                         placeholder="e.g., Hyundai, Xentec, Vaama, EGN, SNL, Gladwin, Yaara, Hybrid EYE"
+                       />
+                     </div>
+                   </div>
                   
                   <div>
                     <Label htmlFor="schoolAddress">School Address:</Label>
