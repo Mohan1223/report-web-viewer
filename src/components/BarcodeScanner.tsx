@@ -35,8 +35,8 @@ export const BarcodeScanner = ({ onScan, onClose, isOpen }: BarcodeScannerProps)
       
       if (!codeReader.current) {
         codeReader.current = new BrowserMultiFormatReader();
-        // Optimize scanning settings for faster detection
-        codeReader.current.timeBetweenDecodingAttempts = 100; // Faster scanning
+        // Optimize scanning settings for much faster detection
+        codeReader.current.timeBetweenDecodingAttempts = 50; // Even faster scanning
       }
 
       const videoElement = videoRef.current;

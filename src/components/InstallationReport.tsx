@@ -202,6 +202,12 @@ const InstallationReport = () => {
           title: "Serial Number Scanned & Added",
           description: `Serial number ${serialValue} scanned and added successfully`,
         });
+      } else if (isDuplicate) {
+        toast({
+          title: "Duplicate Serial Number",
+          description: `Serial number ${serialValue} has already been added to the list`,
+          variant: "destructive",
+        });
       } else if (!isWithinLimit) {
         toast({
           title: "Quantity Limit Reached",
