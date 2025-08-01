@@ -40,13 +40,23 @@ export const BarcodeScanner = ({ onScan, onClose, isOpen }: BarcodeScannerProps)
       const videoElement = videoRef.current;
       if (!videoElement) return;
 
-      // Get video stream
+      // Get video stream with enhanced quality settings
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' } // Use back camera if available
+        video: { 
+          facingMode: 'environment', // Use back camera if available
+          width: { ideal: 1920, min: 640 },
+          height: { ideal: 1080, min: 480 },
+          frameRate: { ideal: 30, min: 15 }
+        }
       });
       
       videoElement.srcObject = stream;
-      videoElement.play();
+      
+      // Set video quality attributes for better scanning
+      videoElement.setAttribute('playsinline', 'true');
+      videoElement.setAttribute('webkit-playsinline', 'true');
+      
+      await videoElement.play();
 
       // Start scanning
       codeReader.current.decodeFromVideoDevice(undefined, videoElement, (result, err) => {
@@ -122,6 +132,10 @@ export const BarcodeScanner = ({ onScan, onClose, isOpen }: BarcodeScannerProps)
                   autoPlay
                   playsInline
                   muted
+                  style={{
+                    imageRendering: 'crisp-edges',
+                    filter: 'contrast(1.1) brightness(1.1)'
+                  }}
                 />
                 {isScanning && (
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -130,8 +144,9 @@ export const BarcodeScanner = ({ onScan, onClose, isOpen }: BarcodeScannerProps)
                 )}
               </div>
               
-              <div className="text-center text-sm text-muted-foreground">
-                Position the barcode within the frame to scan
+              <div className="text-center text-sm text-muted-foreground space-y-2">
+                <p>Position the barcode within the frame to scan</p>
+                <p className="text-xs">📱 Keep steady and ensure good lighting for best results</p>
               </div>
               
               <Button
