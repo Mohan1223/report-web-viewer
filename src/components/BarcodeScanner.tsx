@@ -35,12 +35,14 @@ export const BarcodeScanner = ({ onScan, onClose, isOpen }: BarcodeScannerProps)
       
       if (!codeReader.current) {
         codeReader.current = new BrowserMultiFormatReader();
+        // Optimize scanning settings for faster detection
+        codeReader.current.timeBetweenDecodingAttempts = 100; // Faster scanning
       }
 
       const videoElement = videoRef.current;
       if (!videoElement) return;
 
-      // Get video stream with enhanced quality settings
+      // Get video stream with enhanced quality settings for better scanning
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: 'environment', // Use back camera if available
