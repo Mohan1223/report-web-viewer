@@ -24,6 +24,7 @@ const InstallationReport = () => {
     schoolAddress: "",
     salesOrderNo: "",
     totalIFPQty: "",
+    brandName: "",
     serialNumbers: [] as { serial: string; image?: string; fileName?: string }[],
     currentSerial: "",
     upsPresent: "",
@@ -126,6 +127,7 @@ const InstallationReport = () => {
         spocName: schoolDetails.spocName || "",
         schoolAddress: schoolDetails.schoolAddress || "",
         totalIFPQty: schoolDetails.totalIFPQty?.toString() || "",
+        brandName: schoolDetails.brandName || "",
       });
 
       setSchoolDataState({
@@ -148,6 +150,7 @@ const InstallationReport = () => {
           spocName: "Demo SPOC (9876543210)",
           schoolAddress: "123 Demo Street, Demo City, Demo State - 123456",
           totalIFPQty: "5",
+          brandName: "Vaama",
         });
 
         setSchoolDataState({
