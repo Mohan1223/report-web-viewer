@@ -1365,11 +1365,16 @@ const InstallationReport = () => {
 
         {/* Action Buttons */}
         <div className="flex justify-center gap-4 mb-8">
-          <Button variant="outline" className="flex items-center gap-2">
-            <PrinterIcon className="h-4 w-4" />
-            Print Form
-          </Button>
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => {
+              toast({
+                title: "Download Feature",
+                description: "PDF download functionality will be implemented soon",
+              });
+            }}
+          >
             <DownloadIcon className="h-4 w-4" />
             Download PDF
           </Button>
