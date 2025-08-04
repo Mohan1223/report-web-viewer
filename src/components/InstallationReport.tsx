@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +73,30 @@ const InstallationReport = () => {
   });
 
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+
+  // Initialize canvas when dialog opens
+  useEffect(() => {
+    if (signatureDialogOpen && canvasRef.current) {
+      console.log("Dialog opened, initializing canvas");
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Set white background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // If editing existing signature, load it
+        if (signatureState.isSigned && signatureState.signatureData) {
+          console.log("Loading existing signature for editing");
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          };
+          img.src = signatureState.signatureData;
+        }
+      }
+    }
+  }, [signatureDialogOpen, signatureState.signatureData, signatureState.isSigned]);
 
   const quickCheckItems = [
      "No Physical Damage?",
@@ -498,40 +522,59 @@ const InstallationReport = () => {
   };
 
   const clearSignature = () => {
+    console.log("Clear signature clicked");
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.error("Canvas not found");
+      return;
+    }
     
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.error("Canvas context not found");
+      return;
+    }
     
     // Clear the canvas and set white background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
+    console.log("Clearing signature state");
     setSignatureState({
       isSigned: false,
       signatureData: "",
     });
     
     setFormData({ ...formData, digitalSignature: "" });
+    
+    toast({
+      title: "Signature Removed",
+      description: "Digital signature has been removed successfully",
+    });
   };
 
   const editSignature = () => {
+    console.log("Edit signature clicked", { signatureState, signatureDialogOpen });
     setSignatureDialogOpen(true);
     // Load existing signature if available
     setTimeout(() => {
       if (signatureState.signatureData && canvasRef.current) {
+        console.log("Loading existing signature to canvas");
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         
         const img = new Image();
         img.onload = () => {
+          console.log("Image loaded, drawing to canvas");
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.onerror = () => {
+          console.error("Failed to load signature image");
         };
         img.src = signatureState.signatureData;
       }
@@ -1198,32 +1241,43 @@ const InstallationReport = () => {
                         </Button>
                       </DialogTrigger>
                        <DialogContent className="max-w-2xl">
-                         <DialogHeader>
-                           <DialogTitle className="flex items-center gap-2">
-                             <PenToolIcon className="h-5 w-5" />
-                             {signatureState.isSigned ? 'Edit Digital Signature' : 'Add Digital Signature'}
-                           </DialogTitle>
-                         </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="border-2 border-dashed border-muted rounded-lg p-6 bg-muted/30">
-                            <canvas
-                              ref={canvasRef}
-                              width={600}
-                              height={200}
-                              onMouseDown={startDrawing}
-                              onMouseMove={draw}
-                              onMouseUp={stopDrawing}
-                              onMouseLeave={stopDrawing}
-                              onTouchStart={startDrawing}
-                              onTouchMove={draw}
-                              onTouchEnd={stopDrawing}
-                              className="border border-input rounded bg-white cursor-crosshair w-full block"
-                              style={{ 
-                                touchAction: 'none',
-                                maxWidth: '100%',
-                                height: 'auto'
-                              }}
-                            />
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                              <PenToolIcon className="h-5 w-5" />
+                              {signatureState.isSigned ? 'Edit Digital Signature' : 'Add Digital Signature'}
+                            </DialogTitle>
+                          </DialogHeader>
+                         <div className="space-y-4">
+                           <div className="border-2 border-dashed border-muted rounded-lg p-6 bg-muted/30">
+                             <canvas
+                               ref={canvasRef}
+                               width={600}
+                               height={200}
+                               onMouseDown={startDrawing}
+                               onMouseMove={draw}
+                               onMouseUp={stopDrawing}
+                               onMouseLeave={stopDrawing}
+                               onTouchStart={startDrawing}
+                               onTouchMove={draw}
+                               onTouchEnd={stopDrawing}
+                               className="border border-input rounded bg-white cursor-crosshair w-full block"
+                               style={{ 
+                                 touchAction: 'none',
+                                 maxWidth: '100%',
+                                 height: 'auto'
+                               }}
+                               onLoad={() => {
+                                 console.log("Canvas element loaded");
+                                 const canvas = canvasRef.current;
+                                 if (canvas) {
+                                   const ctx = canvas.getContext('2d');
+                                   if (ctx) {
+                                     ctx.fillStyle = '#ffffff';
+                                     ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                   }
+                                 }
+                               }}
+                             />
                             <p className="text-xs text-muted-foreground mt-2 text-center">
                               Sign above using your mouse, stylus, or finger
                             </p>
