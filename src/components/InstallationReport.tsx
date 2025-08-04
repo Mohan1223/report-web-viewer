@@ -81,22 +81,38 @@ const InstallationReport = () => {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (ctx) {
+        // Setup canvas properties
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
         // Set white background
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // If editing existing signature, load it
+        // If editing existing signature, load it after canvas is ready
         if (signatureState.isSigned && signatureState.signatureData) {
           console.log("Loading existing signature for editing");
-          const img = new Image();
-          img.onload = () => {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          };
-          img.src = signatureState.signatureData;
+          setTimeout(() => {
+            const img = new Image();
+            img.onload = () => {
+              console.log("Signature image loaded and drawn to canvas");
+              // Clear canvas first
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              // Draw the signature
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.onerror = () => {
+              console.error("Failed to load signature image for editing");
+            };
+            img.src = signatureState.signatureData;
+          }, 200); // Increased delay to ensure canvas is fully ready
         }
       }
     }
-  }, [signatureDialogOpen, signatureState.signatureData, signatureState.isSigned]);
+  }, [signatureDialogOpen]);
 
   const quickCheckItems = [
      "No Physical Damage?",
@@ -555,30 +571,11 @@ const InstallationReport = () => {
   };
 
   const editSignature = () => {
-    console.log("Edit signature clicked", { signatureState, signatureDialogOpen });
+    console.log("Edit signature clicked", { 
+      isSigned: signatureState.isSigned,
+      hasData: !!signatureState.signatureData 
+    });
     setSignatureDialogOpen(true);
-    // Load existing signature if available
-    setTimeout(() => {
-      if (signatureState.signatureData && canvasRef.current) {
-        console.log("Loading existing signature to canvas");
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        
-        const img = new Image();
-        img.onload = () => {
-          console.log("Image loaded, drawing to canvas");
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        };
-        img.onerror = () => {
-          console.error("Failed to load signature image");
-        };
-        img.src = signatureState.signatureData;
-      }
-    }, 100);
   };
 
   const handleSubmitReport = () => {
