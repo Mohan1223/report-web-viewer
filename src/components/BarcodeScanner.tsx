@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Camera, X, RotateCcw } from 'lucide-react';
+import { Camera, X, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/library';
 
 interface BarcodeScannerProps {
@@ -12,9 +12,13 @@ interface BarcodeScannerProps {
 
 export const BarcodeScanner = ({ onScan, onClose, isOpen }: BarcodeScannerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string>('');
+  const [zoom, setZoom] = useState(1);
+  const [tapPosition, setTapPosition] = useState<{ x: number; y: number } | null>(null);
   const codeReader = useRef<BrowserMultiFormatReader>();
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -53,6 +57,7 @@ export const BarcodeScanner = ({ onScan, onClose, isOpen }: BarcodeScannerProps)
       });
       
       videoElement.srcObject = stream;
+      streamRef.current = stream;
       
       // Set video quality attributes for better scanning
       videoElement.setAttribute('playsinline', 'true');
@@ -100,6 +105,41 @@ export const BarcodeScanner = ({ onScan, onClose, isOpen }: BarcodeScannerProps)
     startScanning();
   };
 
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev + 0.5, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev - 0.5, 1));
+  };
+
+  const handleVideoClick = (event: React.MouseEvent<HTMLVideoElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    
+    setTapPosition({ x, y });
+    
+    // Clear tap position after animation
+    setTimeout(() => setTapPosition(null), 500);
+    
+    // Try to scan from the specific area
+    if (codeReader.current && videoRef.current) {
+      try {
+        codeReader.current.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
+          if (result) {
+            const scannedText = result.getText();
+            onScan(scannedText);
+            stopScanning();
+            onClose();
+          }
+        });
+      } catch (error) {
+        console.error('Error scanning at tap position:', error);
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -127,27 +167,71 @@ export const BarcodeScanner = ({ onScan, onClose, isOpen }: BarcodeScannerProps)
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="relative bg-black rounded-lg overflow-hidden">
+              <div ref={containerRef} className="relative bg-black rounded-lg overflow-hidden">
                 <video
                   ref={videoRef}
-                  className="w-full h-64 object-cover"
+                  className="w-full h-64 object-cover cursor-crosshair"
                   autoPlay
                   playsInline
                   muted
+                  onClick={handleVideoClick}
                   style={{
                     imageRendering: 'crisp-edges',
-                    filter: 'contrast(1.1) brightness(1.1)'
+                    filter: 'contrast(1.1) brightness(1.1)',
+                    transform: `scale(${zoom})`,
+                    transformOrigin: 'center center',
+                    transition: 'transform 0.2s ease-out'
                   }}
                 />
                 {isScanning && (
-                  <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="border-2 border-primary bg-transparent w-3/4 h-1/2 rounded-lg"></div>
+                  </div>
+                )}
+                {tapPosition && (
+                  <div 
+                    className="absolute w-8 h-8 border-2 border-blue-400 rounded-full bg-blue-400/20 animate-ping pointer-events-none"
+                    style={{
+                      left: `${tapPosition.x}%`,
+                      top: `${tapPosition.y}%`,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  />
+                )}
+                
+                {/* Zoom Controls */}
+                <div className="absolute bottom-2 right-2 flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 w-8 p-0 bg-black/50 border-white/20 text-white hover:bg-white/20"
+                    onClick={handleZoomOut}
+                    disabled={zoom <= 1}
+                  >
+                    <ZoomOut className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 w-8 p-0 bg-black/50 border-white/20 text-white hover:bg-white/20"
+                    onClick={handleZoomIn}
+                    disabled={zoom >= 3}
+                  >
+                    <ZoomIn className="h-3 w-3" />
+                  </Button>
+                </div>
+                
+                {/* Zoom indicator */}
+                {zoom > 1 && (
+                  <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                    {zoom.toFixed(1)}x
                   </div>
                 )}
               </div>
               
               <div className="text-center text-sm text-muted-foreground space-y-2">
-                <p>Position the barcode within the frame to scan</p>
+                <p>Tap on a barcode to scan it directly</p>
+                <p className="text-xs">🔍 Use zoom controls or tap specific barcodes to scan</p>
                 <p className="text-xs">📱 Keep steady and ensure good lighting for best results</p>
               </div>
               
