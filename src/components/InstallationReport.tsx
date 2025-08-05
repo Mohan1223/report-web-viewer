@@ -77,7 +77,6 @@ const InstallationReport = () => {
   // Initialize canvas when dialog opens
   useEffect(() => {
     if (signatureDialogOpen && canvasRef.current) {
-      console.log("Dialog opened, initializing canvas");
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (ctx) {
@@ -91,28 +90,18 @@ const InstallationReport = () => {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // If editing existing signature, load it after canvas is ready
+        // If editing existing signature, load it immediately
         if (signatureState.isSigned && signatureState.signatureData) {
-          console.log("Loading existing signature for editing");
-          setTimeout(() => {
-            const img = new Image();
-            img.onload = () => {
-              console.log("Signature image loaded and drawn to canvas");
-              // Clear canvas first
-              ctx.fillStyle = '#ffffff';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              // Draw the signature
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            };
-            img.onerror = () => {
-              console.error("Failed to load signature image for editing");
-            };
-            img.src = signatureState.signatureData;
-          }, 200); // Increased delay to ensure canvas is fully ready
+          const img = new Image();
+          img.onload = () => {
+            // Draw the signature on top of white background
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          };
+          img.src = signatureState.signatureData;
         }
       }
     }
-  }, [signatureDialogOpen]);
+  }, [signatureDialogOpen, signatureState.signatureData]);
 
   const quickCheckItems = [
      "No Physical Damage?",
@@ -219,48 +208,60 @@ const InstallationReport = () => {
   };
 
   const handleScanResult = (result: string) => {
-    setFormData({ ...formData, currentSerial: result });
-    setScannerState({
-      isOpen: false,
+    setScannerState({ isOpen: false });
+    
+    const serialValue = result.trim();
+    const isDuplicate = formData.serialNumbers.some(item => 
+      typeof item === 'string' ? item === serialValue : item.serial === serialValue
+    );
+    const ifpQty = parseInt(formData.totalIFPQty) || 0;
+    const isWithinLimit = ifpQty === 0 || formData.serialNumbers.length < ifpQty;
+    
+    if (!serialValue) {
+      toast({
+        title: "Invalid Scan",
+        description: "No valid barcode data detected. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (isDuplicate) {
+      toast({
+        title: "Duplicate Serial Number",
+        description: `Serial number ${serialValue} has already been added`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!isWithinLimit) {
+      toast({
+        title: "Quantity Limit Reached",
+        description: `Cannot add more than ${ifpQty} serial numbers (IFP quantity limit)`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Add the scanned serial number
+    setFormData(prev => ({
+      ...prev,
+      serialNumbers: [...prev.serialNumbers, { serial: serialValue }],
+      currentSerial: "",
+    }));
+    
+    toast({
+      title: "Serial Number Added",
+      description: `${serialValue} scanned and added successfully`,
     });
-    // Auto-add the scanned serial number
-    setTimeout(() => {
-      const serialValue = result.trim();
-      const isDuplicate = formData.serialNumbers.some(item => 
-        typeof item === 'string' ? item === serialValue : item.serial === serialValue
-      );
-      const ifpQty = parseInt(formData.totalIFPQty) || 0;
-      const isWithinLimit = ifpQty === 0 || formData.serialNumbers.length < ifpQty;
-      
-      if (serialValue && !isDuplicate && isWithinLimit) {
-        setFormData(prev => ({
-          ...prev,
-          serialNumbers: [...prev.serialNumbers, { serial: serialValue }],
-          currentSerial: "",
-        }));
-        toast({
-          title: "Serial Number Scanned & Added",
-          description: `Serial number ${serialValue} scanned and added successfully`,
-        });
-      } else if (isDuplicate) {
-        toast({
-          title: "Duplicate Serial Number",
-          description: `Serial number ${serialValue} has already been added to the list`,
-          variant: "destructive",
-        });
-      } else if (!isWithinLimit) {
-        toast({
-          title: "Quantity Limit Reached",
-          description: `Cannot add more than ${ifpQty} serial numbers (IFP quantity limit)`,
-          variant: "destructive",
-        });
-      }
-    }, 100);
   };
 
   const closeScanner = () => {
-    setScannerState({
-      isOpen: false,
+    setScannerState({ isOpen: false });
+    toast({
+      title: "Scanner Closed",
+      description: "You can try scanning again or manually enter the serial number",
     });
   };
 
@@ -538,25 +539,17 @@ const InstallationReport = () => {
   };
 
   const clearSignature = () => {
-    console.log("Clear signature clicked");
     const canvas = canvasRef.current;
-    if (!canvas) {
-      console.error("Canvas not found");
-      return;
-    }
+    if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.error("Canvas context not found");
-      return;
-    }
+    if (!ctx) return;
     
     // Clear the canvas and set white background
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    console.log("Clearing signature state");
     setSignatureState({
       isSigned: false,
       signatureData: "",
@@ -565,34 +558,90 @@ const InstallationReport = () => {
     setFormData({ ...formData, digitalSignature: "" });
     
     toast({
-      title: "Signature Removed",
-      description: "Digital signature has been removed successfully",
+      title: "Signature Cleared",
+      description: "Canvas cleared. You can draw a new signature.",
     });
   };
 
   const editSignature = () => {
-    console.log("Edit signature clicked", { 
-      isSigned: signatureState.isSigned,
-      hasData: !!signatureState.signatureData 
-    });
     setSignatureDialogOpen(true);
   };
 
   const handleSubmitReport = () => {
-    // Validate required fields
-    if (!formData.agreement) {
-      toast({
-        title: "Agreement Required",
-        description: "Please accept the agreement before submitting",
-        variant: "destructive",
-      });
-      return;
+    // Comprehensive validation
+    const validationErrors = [];
+
+    if (!formData.salesOrderNo.trim()) {
+      validationErrors.push("Sales Order Number is required");
+    }
+
+    if (!schoolDataState.isFetched) {
+      validationErrors.push("Please fetch school details first");
+    }
+
+    if (!formData.schoolName.trim()) {
+      validationErrors.push("School Name is required");
+    }
+
+    if (!formData.spocName.trim()) {
+      validationErrors.push("SPOC Name is required");
+    }
+
+    if (!formData.schoolAddress.trim()) {
+      validationErrors.push("School Address is required");
+    }
+
+    if (!formData.totalIFPQty || parseInt(formData.totalIFPQty) === 0) {
+      validationErrors.push("Total IFP Quantity is required");
+    }
+
+    if (formData.serialNumbers.length === 0) {
+      validationErrors.push("At least one serial number is required");
+    }
+
+    const expectedQty = parseInt(formData.totalIFPQty) || 0;
+    if (formData.serialNumbers.length !== expectedQty) {
+      validationErrors.push(`Serial numbers count (${formData.serialNumbers.length}) must match IFP quantity (${expectedQty})`);
+    }
+
+    if (!formData.engineerName.trim()) {
+      validationErrors.push("Engineer Name is required");
+    }
+
+    if (!formData.engineerContact.trim()) {
+      validationErrors.push("Engineer Contact is required");
+    }
+
+    if (!formData.schoolOwnerEmail.trim()) {
+      validationErrors.push("School Owner Email is required");
+    }
+
+    if (!signatureState.isSigned) {
+      validationErrors.push("Digital signature is required");
     }
 
     if (!otpState.isOtpVerified) {
+      validationErrors.push("Mobile number verification is required");
+    }
+
+    if (!formData.agreement) {
+      validationErrors.push("Agreement acceptance is required");
+    }
+
+    // Check if any quick check item is marked as "No"
+    const failedChecks = formData.quickCheck
+      .map((value, index) => ({ value, index }))
+      .filter(item => item.value === false)
+      .map(item => quickCheckItems[item.index]);
+
+    if (failedChecks.length > 0) {
+      validationErrors.push(`Please resolve failed checks: ${failedChecks.join(', ')}`);
+    }
+
+    if (validationErrors.length > 0) {
       toast({
-        title: "OTP Verification Required",
-        description: "Please verify your mobile number before submitting",
+        title: "Validation Failed",
+        description: validationErrors[0], // Show first error
         variant: "destructive",
       });
       return;
@@ -602,8 +651,8 @@ const InstallationReport = () => {
     clearSavedData();
     
     toast({
-      title: "Report Submitted",
-      description: "Installation report submitted successfully",
+      title: "Report Submitted Successfully",
+      description: "Installation report has been submitted and saved",
     });
   };
 
@@ -805,129 +854,66 @@ const InstallationReport = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2">
-            {/* Single Image Upload - Camera or Gallery */}
+            {/* Single Image Upload - Simplified */}
             {(typeof item !== 'string' && !item.image) || (typeof item === 'string') ? (
-              <>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
+              <div className="flex gap-2">
+                <label className="cursor-pointer inline-flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                  📷 Add Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
 
-                    try {
-                      let processedFile = file;
-                      
-                      // Compress image if over 5MB
-                      if (file.size > 5 * 1024 * 1024) {
-                        toast({
-                          title: "Compressing Image",
-                          description: "Large image detected, compressing...",
-                        });
-                        processedFile = await compressImage(file);
-                      }
-
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const updated = [...formData.serialNumbers];
-                        if (typeof updated[index] === 'string') {
-                          updated[index] = { 
-                            serial: updated[index] as string, 
-                            image: event.target?.result as string,
-                            fileName: processedFile.name 
-                          };
-                        } else {
-                          updated[index].image = event.target?.result as string;
-                          updated[index].fileName = processedFile.name;
-                        }
-                        setFormData({ ...formData, serialNumbers: updated });
+                      try {
+                        let processedFile = file;
                         
+                        // Show loading state
                         toast({
-                          title: "Photo Added",
-                          description: `${processedFile.name} uploaded successfully`,
+                          title: "Processing Image",
+                          description: "Please wait while we process your image...",
                         });
-                      };
-                      reader.readAsDataURL(processedFile);
-                    } catch (error) {
-                      toast({
-                        title: "Error",
-                        description: "Failed to process image. Please try again.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                  className="hidden"
-                  id={`camera-${index}`}
-                />
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-
-                    try {
-                      let processedFile = file;
-                      
-                      // Compress image if over 5MB
-                      if (file.size > 5 * 1024 * 1024) {
-                        toast({
-                          title: "Compressing Image",
-                          description: "Large image detected, compressing...",
-                        });
-                        processedFile = await compressImage(file);
-                      }
-
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const updated = [...formData.serialNumbers];
-                        if (typeof updated[index] === 'string') {
-                          updated[index] = { 
-                            serial: updated[index] as string, 
-                            image: event.target?.result as string,
-                            fileName: processedFile.name 
-                          };
-                        } else {
-                          updated[index].image = event.target?.result as string;
-                          updated[index].fileName = processedFile.name;
-                        }
-                        setFormData({ ...formData, serialNumbers: updated });
                         
-                        toast({
-                          title: "Photo Added",
-                          description: `${processedFile.name} uploaded successfully`,
-                        });
-                      };
-                      reader.readAsDataURL(processedFile);
-                    } catch (error) {
-                      toast({
-                        title: "Error",
-                        description: "Failed to process image. Please try again.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                  className="hidden"
-                  id={`gallery-${index}`}
-                />
+                        // Compress image if over 5MB
+                        if (file.size > 5 * 1024 * 1024) {
+                          processedFile = await compressImage(file);
+                        }
 
-                <div className="flex gap-2">
-                  <label
-                    htmlFor={`camera-${index}`}
-                    className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    📷 Camera
-                  </label>
-                  <label
-                    htmlFor={`gallery-${index}`}
-                    className="cursor-pointer inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    🖼️ Gallery
-                  </label>
-                </div>
-              </>
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const updated = [...formData.serialNumbers];
+                          if (typeof updated[index] === 'string') {
+                            updated[index] = { 
+                              serial: updated[index] as string, 
+                              image: event.target?.result as string,
+                              fileName: processedFile.name 
+                            };
+                          } else {
+                            updated[index].image = event.target?.result as string;
+                            updated[index].fileName = processedFile.name;
+                          }
+                          setFormData({ ...formData, serialNumbers: updated });
+                          
+                          toast({
+                            title: "Photo Added Successfully",
+                            description: `${processedFile.name} uploaded and processed`,
+                          });
+                        };
+                        reader.readAsDataURL(processedFile);
+                      } catch (error) {
+                        toast({
+                          title: "Upload Failed",
+                          description: "Failed to process image. Please try again.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
             ) : null}
 
             {typeof item !== 'string' && item.image && (
@@ -1420,14 +1406,33 @@ const InstallationReport = () => {
             variant="outline" 
             className="flex items-center gap-2"
             onClick={() => {
+              // Generate PDF download functionality
+              const reportData = {
+                ...formData,
+                signatureData: signatureState.signatureData,
+                timestamp: new Date().toISOString(),
+              };
+              
+              // For now, download as JSON - can be replaced with actual PDF generation
+              const dataStr = JSON.stringify(reportData, null, 2);
+              const dataBlob = new Blob([dataStr], { type: 'application/json' });
+              const url = URL.createObjectURL(dataBlob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `installation-report-${formData.salesOrderNo || 'draft'}-${new Date().toISOString().split('T')[0]}.json`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+              
               toast({
-                title: "Download Feature",
-                description: "PDF download functionality will be implemented soon",
+                title: "Report Downloaded",
+                description: "Installation report downloaded successfully",
               });
             }}
           >
             <DownloadIcon className="h-4 w-4" />
-            Download PDF
+            Download Report
           </Button>
           <Button 
             className="flex items-center gap-2"
