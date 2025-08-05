@@ -657,8 +657,21 @@ const InstallationReport = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background py-8 px-4">
-      <div className="max-w-4xl mx-auto animate-fade-in">
+    <div className="min-h-screen bg-gradient-secondary">
+      {/* Professional Header */}
+      <div className="bg-gradient-primary text-primary-foreground py-8 shadow-elegant">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <ShieldCheckIcon className="h-8 w-8" />
+              <h1 className="text-3xl font-bold">IFP Installation & Service Report</h1>
+            </div>
+            <p className="text-primary-foreground/90 text-lg">Professional Installation Documentation System</p>
+          </div>
+        </div>
+      </div>
+      
+      <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in space-y-8">
         {/* Header */}
         <Card className="mb-6 shadow-card border-0 overflow-hidden">
           <CardHeader className="text-center bg-gradient-primary text-primary-foreground relative">
@@ -1401,7 +1414,7 @@ const InstallationReport = () => {
         </Card>
 
         {/* Action Buttons */}
-        <div className="flex justify-center gap-4 mb-8">
+        <div className="flex justify-center gap-4 py-8">
           <Button 
             variant="outline" 
             className="flex items-center gap-2"
