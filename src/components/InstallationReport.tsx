@@ -1130,47 +1130,6 @@ const InstallationReport = () => {
           </CardContent>
         </Card>
 
-        {/* Quick Check */}
-        <Card className="mb-6">
-  <CardHeader>
-    <CardTitle className="text-lg bg-table-header px-4 py-2 rounded">
-      Interactive Display Quick Check
-    </CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="grid grid-cols-1 md:grid-cols-2 relative gap-8">
-      {/* Vertical divider */}
-      <div className="hidden md:block absolute left-1/2 top-0 h-full w-px bg-gray-300" />
-
-      {quickCheckItems.map((item, index) => (
-        <div key={index} className="flex items-center justify-between gap-4">
-          <Label htmlFor={`quickcheck-${index}`} className="text-sm font-medium w-2/3 pr-2 flex items-center gap-2">
-            <span className="text-primary">★</span> {/* Or use ● for bullet */}
-            <span>{item}</span>
-          </Label>
-
-          <RadioGroup
-            id={`quickcheck-${index}`}
-            value={formData.quickCheck[index] === true ? "yes" : formData.quickCheck[index] === false ? "no" : ""}
-            onValueChange={(value) => updateQuickCheck(index, value === "yes" ? true : value === "no" ? false : null)}
-            className="flex gap-4"
-          >
-            <div className="flex items-center space-x-1">
-              <RadioGroupItem value="yes" id={`yes-${index}`} />
-              <Label htmlFor={`yes-${index}`}>Yes</Label>
-            </div>
-            <div className="flex items-center space-x-1">
-              <RadioGroupItem value="no" id={`no-${index}`} />
-              <Label htmlFor={`no-${index}`}>No</Label>
-            </div>
-          </RadioGroup>
-        </div>
-      ))}
-    </div>
-  </CardContent>
-</Card>
-
-
         {/* Engineer Information */}
         <Card className="mb-6">
           <CardHeader>
