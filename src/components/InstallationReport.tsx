@@ -26,7 +26,7 @@ const InstallationReport = () => {
     salesOrderNo: "",
     totalIFPQty: "",
     brandName: "",
-    serialNumbers: [] as { serial: string; image?: string; fileName?: string }[],
+    serialNumbers: [] as { serial: string; image?: string; fileName?: string; accessories?: any; qcStatus?: string }[],
     currentSerial: "",
     upsPresent: "",
     earthingRequired: "",
@@ -77,6 +77,8 @@ const InstallationReport = () => {
   const [qcDialogOpen, setQcDialogOpen] = useState(false);
   const [qcStatus, setQcStatus] = useState<"passed" | "failed" | null>(null);
   const [failedItems, setFailedItems] = useState<number[]>([]);
+  const [accessoriesDialogOpen, setAccessoriesDialogOpen] = useState(false);
+  const [currentDeviceIndex, setCurrentDeviceIndex] = useState<number | null>(null);
 
   // Initialize canvas when dialog opens
   useEffect(() => {
@@ -325,6 +327,21 @@ const InstallationReport = () => {
         ? prev.filter(i => i !== index)
         : [...prev, index]
     );
+  };
+
+  const updateDeviceAccessory = (deviceIndex: number, accessoryKey: string, checked: boolean) => {
+    const updated = [...formData.serialNumbers];
+    if (!updated[deviceIndex].accessories) {
+      updated[deviceIndex].accessories = {
+        stylus: false,
+        remote: false,
+        powerCable: false,
+        touchCable: false,
+        hdmiCable: false,
+      };
+    }
+    updated[deviceIndex].accessories[accessoryKey] = checked;
+    setFormData({ ...formData, serialNumbers: updated });
   };
 
   // OTP Functions
@@ -911,6 +928,35 @@ const InstallationReport = () => {
               title="Remove Serial Number"
             >
               ×
+            </Button>
+          </div>
+
+          {/* Device-specific toggles */}
+          <div className="flex gap-2 flex-wrap mb-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setQcDialogOpen(true);
+              }}
+              className="flex items-center gap-1 h-8 text-xs"
+            >
+              <CheckCircle2Icon className="h-3 w-3" />
+              QC Check
+            </Button>
+            
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCurrentDeviceIndex(index);
+                setAccessoriesDialogOpen(true);
+              }}
+              className="flex items-center gap-1 h-8 text-xs"
+            >
+              📦 Accessories
             </Button>
           </div>
 
@@ -1551,6 +1597,63 @@ const InstallationReport = () => {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Accessories Dialog */}
+        <Dialog open={accessoriesDialogOpen} onOpenChange={setAccessoriesDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                📦 Accessories Received
+              </DialogTitle>
+            </DialogHeader>
+            
+            {currentDeviceIndex !== null && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Device: {typeof formData.serialNumbers[currentDeviceIndex] === 'string' 
+                    ? formData.serialNumbers[currentDeviceIndex] 
+                    : formData.serialNumbers[currentDeviceIndex].serial}
+                </p>
+                
+                <div className="space-y-3">
+                  {[
+                    { key: 'stylus', label: 'Stylus (2N)' },
+                    { key: 'remote', label: 'Remote' },
+                    { key: 'powerCable', label: 'Power Cable' },
+                    { key: 'touchCable', label: 'Touch Cable' },
+                    { key: 'hdmiCable', label: 'HDMI Cable' }
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`accessory-${key}`}
+                        checked={formData.serialNumbers[currentDeviceIndex]?.accessories?.[key] || false}
+                        onCheckedChange={(checked) => 
+                          updateDeviceAccessory(currentDeviceIndex, key, !!checked)
+                        }
+                      />
+                      <Label htmlFor={`accessory-${key}`} className="text-sm">
+                        {label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setAccessoriesDialogOpen(false);
+                      setCurrentDeviceIndex(null);
+                    }}
+                    className="flex-1"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
