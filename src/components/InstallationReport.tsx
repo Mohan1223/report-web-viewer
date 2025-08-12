@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, PrinterIcon, DownloadIcon, PhoneIcon, ShieldCheckIcon, PenToolIcon, RotateCcwIcon, MailIcon, ScanLine, CheckCircle2Icon, SearchIcon, LoaderIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarcodeScanner } from "./BarcodeScanner";
@@ -73,6 +74,9 @@ const InstallationReport = () => {
   });
 
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+  const [qcDialogOpen, setQcDialogOpen] = useState(false);
+  const [qcStatus, setQcStatus] = useState<"passed" | "failed" | null>(null);
+  const [failedItems, setFailedItems] = useState<number[]>([]);
 
   // Initialize canvas when dialog opens
   useEffect(() => {
@@ -255,6 +259,9 @@ const InstallationReport = () => {
       title: "Serial Number Added",
       description: `${serialValue} scanned and added successfully`,
     });
+
+    // Show QC dialog after adding barcode
+    setQcDialogOpen(true);
   };
 
   const closeScanner = () => {
@@ -276,6 +283,48 @@ const InstallationReport = () => {
     const newQuickCheck = [...formData.quickCheck];
     newQuickCheck[index] = value;
     setFormData({ ...formData, quickCheck: newQuickCheck });
+  };
+
+  const handleQcComplete = () => {
+    if (qcStatus === "failed") {
+      // Update quickCheck array based on failed items
+      const newQuickCheck = [...formData.quickCheck];
+      quickCheckItems.forEach((_, index) => {
+        if (failedItems.includes(index)) {
+          newQuickCheck[index] = false;
+        } else {
+          newQuickCheck[index] = true;
+        }
+      });
+      setFormData({ ...formData, quickCheck: newQuickCheck });
+      
+      toast({
+        title: "QC Failed Items Recorded",
+        description: `${failedItems.length} item(s) marked as failed`,
+        variant: "destructive",
+      });
+    } else if (qcStatus === "passed") {
+      // Mark all items as passed
+      const newQuickCheck = Array(quickCheckItems.length).fill(true);
+      setFormData({ ...formData, quickCheck: newQuickCheck });
+      
+      toast({
+        title: "QC Passed",
+        description: "All quality checks passed successfully",
+      });
+    }
+    
+    setQcDialogOpen(false);
+    setQcStatus(null);
+    setFailedItems([]);
+  };
+
+  const toggleFailedItem = (index: number) => {
+    setFailedItems(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
   };
 
   // OTP Functions
@@ -664,9 +713,8 @@ const InstallationReport = () => {
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-2">
               <ShieldCheckIcon className="h-8 w-8" />
-              <h1 className="text-3xl font-bold">TV & IFP Installation & Service Report</h1>
+              <h1 className="text-3xl font-bold">Installation & Service Report</h1>
             </div>
-           
           </div>
         </div>
       </div>
@@ -1462,6 +1510,87 @@ const InstallationReport = () => {
           onScan={handleScanResult}
           onClose={closeScanner}
         />
+
+        {/* QC Dialog */}
+        <Dialog open={qcDialogOpen} onOpenChange={setQcDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CheckCircle2Icon className="h-6 w-6" />
+                Interactive Display Quick Check
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Please perform the following quality checks on the installed device:
+                </p>
+                
+                <div className="space-y-3">
+                  {quickCheckItems.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-background rounded border">
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        <span className="text-primary">★</span>
+                        {item}
+                      </span>
+                      <Checkbox
+                        checked={failedItems.includes(index)}
+                        onCheckedChange={() => toggleFailedItem(index)}
+                        className="h-5 w-5"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label>QC Status</Label>
+                <Select value={qcStatus || ""} onValueChange={(value: "passed" | "failed") => setQcStatus(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select QC status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="passed">✅ QC Passed - All checks OK</SelectItem>
+                    <SelectItem value="failed">❌ QC Failed - Some items need attention</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {qcStatus === "failed" && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded">
+                  <p className="text-sm text-destructive font-medium">
+                    Please check the items above that failed the quality check.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Selected failed items: {failedItems.length}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setQcDialogOpen(false);
+                    setQcStatus(null);
+                    setFailedItems([]);
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleQcComplete}
+                  disabled={!qcStatus}
+                  className="flex-1"
+                >
+                  Complete QC
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
