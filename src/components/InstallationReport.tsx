@@ -664,9 +664,9 @@ const InstallationReport = () => {
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-2">
               <ShieldCheckIcon className="h-8 w-8" />
-              <h1 className="text-3xl font-bold">IFP Installation & Service Report</h1>
+              <h1 className="text-3xl font-bold">TV & IFP Installation & Service Report</h1>
             </div>
-            <p className="text-primary-foreground/90 text-lg">Professional Installation Documentation System</p>
+           
           </div>
         </div>
       </div>
