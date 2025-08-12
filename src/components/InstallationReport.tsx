@@ -961,6 +961,9 @@ const InstallationReport = () => {
                             title: "Photo Added Successfully",
                             description: `${processedFile.name} uploaded and processed`,
                           });
+
+                          // Show QC dialog after adding photo
+                          setQcDialogOpen(true);
                         };
                         reader.readAsDataURL(processedFile);
                       } catch (error) {
