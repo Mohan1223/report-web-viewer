@@ -933,31 +933,90 @@ const InstallationReport = () => {
 
           {/* Device-specific toggles */}
           <div className="flex gap-2 flex-wrap mb-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setQcDialogOpen(true);
-              }}
-              className="flex items-center gap-1 h-8 text-xs"
-            >
-              <CheckCircle2Icon className="h-3 w-3" />
-              QC Check
-            </Button>
+            {(() => {
+              // Calculate QC status
+              const hasFailedQC = formData.quickCheck && formData.quickCheck.some(check => !check);
+              const failedQcItems = formData.quickCheck ? 
+                quickCheckItems.filter((_, idx) => !formData.quickCheck[idx]) : [];
+              
+              return (
+                <div className="flex flex-col gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setQcDialogOpen(true);
+                    }}
+                    className={`flex items-center gap-1 h-8 text-xs ${
+                      hasFailedQC ? 'border-red-200 text-red-600' : 
+                      formData.quickCheck && formData.quickCheck.every(check => check) ? 'border-green-200 text-green-600' : ''
+                    }`}
+                  >
+                    {hasFailedQC ? (
+                      <>❌ QC Failed</>
+                    ) : formData.quickCheck && formData.quickCheck.every(check => check) ? (
+                      <>✅ QC Passed</>
+                    ) : (
+                      <><CheckCircle2Icon className="h-3 w-3" /> QC Check</>
+                    )}
+                  </Button>
+                  {hasFailedQC && failedQcItems.length > 0 && (
+                    <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded border">
+                      Failed: {failedQcItems.join(', ')}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setCurrentDeviceIndex(index);
-                setAccessoriesDialogOpen(true);
-              }}
-              className="flex items-center gap-1 h-8 text-xs"
-            >
-              📦 Accessories
-            </Button>
+            {(() => {
+              // Calculate Accessories status
+              const accessories = [
+                { key: 'stylus', label: 'Stylus (2N)' },
+                { key: 'remote', label: 'Remote' },
+                { key: 'powerCable', label: 'Power Cable' },
+                { key: 'touchCable', label: 'Touch Cable' },
+                { key: 'hdmiCable', label: 'HDMI Cable' }
+              ];
+              
+              const deviceAccessories = typeof item !== 'string' ? item.accessories : null;
+              const checkedAccessories = accessories.filter(acc => deviceAccessories?.[acc.key]);
+              const missingAccessories = accessories.filter(acc => !deviceAccessories?.[acc.key]);
+              const allReceived = checkedAccessories.length === accessories.length;
+              const hasAnyAccessories = deviceAccessories && Object.values(deviceAccessories).some(Boolean);
+              
+              return (
+                <div className="flex flex-col gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCurrentDeviceIndex(index);
+                      setAccessoriesDialogOpen(true);
+                    }}
+                    className={`flex items-center gap-1 h-8 text-xs ${
+                      hasAnyAccessories && !allReceived ? 'border-red-200 text-red-600' : 
+                      allReceived ? 'border-green-200 text-green-600' : ''
+                    }`}
+                  >
+                    {hasAnyAccessories && !allReceived ? (
+                      <>❌ Accessories Missing</>
+                    ) : allReceived ? (
+                      <>✅ All Accessories Received</>
+                    ) : (
+                      <>📦 Accessories</>
+                    )}
+                  </Button>
+                  {hasAnyAccessories && !allReceived && missingAccessories.length > 0 && (
+                    <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded border">
+                      Missing: {missingAccessories.map(acc => acc.label).join(', ')}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2">
