@@ -7,7 +7,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, PrinterIcon, DownloadIcon, PhoneIcon, ShieldCheckIcon, PenToolIcon, RotateCcwIcon, MailIcon, ScanLine, CheckCircle2Icon, SearchIcon, LoaderIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BarcodeScanner } from "./BarcodeScanner";
@@ -26,7 +25,7 @@ const InstallationReport = () => {
     salesOrderNo: "",
     totalIFPQty: "",
     brandName: "",
-    serialNumbers: [] as { serial: string; image?: string; fileName?: string; accessories?: any; qcStatus?: string }[],
+    serialNumbers: [] as { serial: string; image?: string; fileName?: string;quickCheck?: boolean[];qcVerified?: boolean; qcStatus?: string;}[],
     currentSerial: "",
     upsPresent: "",
     earthingRequired: "",
@@ -38,7 +37,7 @@ const InstallationReport = () => {
       touchCable: false,
       hdmiCable: false,
     },
-    quickCheck: Array(15).fill(null),
+    
     engineerName: "",
     engineerContact: "",
     schoolOwnerEmail: "",
@@ -74,11 +73,6 @@ const InstallationReport = () => {
   });
 
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
-  const [qcDialogOpen, setQcDialogOpen] = useState(false);
-  const [qcStatus, setQcStatus] = useState<"passed" | "failed" | null>(null);
-  const [failedItems, setFailedItems] = useState<number[]>([]);
-  const [accessoriesDialogOpen, setAccessoriesDialogOpen] = useState(false);
-  const [currentDeviceIndex, setCurrentDeviceIndex] = useState<number | null>(null);
 
   // Initialize canvas when dialog opens
   useEffect(() => {
@@ -108,6 +102,39 @@ const InstallationReport = () => {
       }
     }
   }, [signatureDialogOpen, signatureState.signatureData]);
+  // Ensure serialNumbers have consistent shape (quickCheck boolean[] and qcVerified boolean)
+useEffect(() => {
+  setFormData(prev => {
+    if (!prev || !Array.isArray(prev.serialNumbers)) return prev;
+
+    const normalized = prev.serialNumbers.map((s) => {
+      if (typeof s === "string") {
+        return {
+          serial: s,
+          quickCheck: Array(quickCheckItems.length).fill(false),
+          qcVerified: false,
+        };
+      }
+      // object case - ensure arrays & booleans
+      return {
+        ...s,
+        quickCheck: Array.from(
+          { length: quickCheckItems.length },
+          (_, i) => !!(s.quickCheck && s.quickCheck[i])
+        ),
+        qcVerified: !!s.qcVerified,
+      };
+    });
+
+    // if normalization changed anything, update state
+    const same = normalized.length === prev.serialNumbers.length &&
+                 normalized.every((n, i) => JSON.stringify(n) === JSON.stringify(prev.serialNumbers[i]));
+    return same ? prev : { ...prev, serialNumbers: normalized };
+  });
+// run only once on mount
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
 
   const quickCheckItems = [
      "No Physical Damage?",
@@ -214,57 +241,61 @@ const InstallationReport = () => {
   };
 
   const handleScanResult = (result: string) => {
-    setScannerState({ isOpen: false });
-    
-    const serialValue = result.trim();
-    const isDuplicate = formData.serialNumbers.some(item => 
-      typeof item === 'string' ? item === serialValue : item.serial === serialValue
-    );
-    const ifpQty = parseInt(formData.totalIFPQty) || 0;
-    const isWithinLimit = ifpQty === 0 || formData.serialNumbers.length < ifpQty;
-    
-    if (!serialValue) {
-      toast({
-        title: "Invalid Scan",
-        description: "No valid barcode data detected. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (isDuplicate) {
-      toast({
-        title: "Duplicate Serial Number",
-        description: `Serial number ${serialValue} has already been added`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!isWithinLimit) {
-      toast({
-        title: "Quantity Limit Reached",
-        description: `Cannot add more than ${ifpQty} serial numbers (IFP quantity limit)`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Add the scanned serial number
-    setFormData(prev => ({
-      ...prev,
-      serialNumbers: [...prev.serialNumbers, { serial: serialValue }],
-      currentSerial: "",
-    }));
-    
-    toast({
-      title: "Serial Number Added",
-      description: `${serialValue} scanned and added successfully`,
-    });
+  setScannerState({ isOpen: false });
 
-    // Show QC dialog after adding barcode
-    setQcDialogOpen(true);
+  const serialValue = result.trim();
+  const isDuplicate = formData.serialNumbers.some(item =>
+    typeof item === 'string' ? item === serialValue : item.serial === serialValue
+  );
+  const ifpQty = parseInt(formData.totalIFPQty) || 0;
+  const isWithinLimit = ifpQty === 0 || formData.serialNumbers.length < ifpQty;
+
+  if (!serialValue) {
+    toast({
+      title: "Invalid Scan",
+      description: "No valid barcode data detected. Please try again.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  if (isDuplicate) {
+    toast({
+      title: "Duplicate Serial Number",
+      description: `Serial number ${serialValue} has already been added`,
+      variant: "destructive",
+    });
+    return;
+  }
+
+  if (!isWithinLimit) {
+    toast({
+      title: "Quantity Limit Reached",
+      description: `Cannot add more than ${ifpQty} serial numbers (IFP quantity limit)`,
+      variant: "destructive",
+    });
+    return;
+  }
+
+  // Initialize quickCheck as all false (not checked => failed) and qcVerified false
+  const newDevice = {
+    serial: serialValue,
+    quickCheck: Array(quickCheckItems.length).fill(false) as boolean[],
+    qcVerified: false,
   };
+
+  setFormData(prev => ({
+    ...prev,
+    serialNumbers: [...prev.serialNumbers, newDevice],
+    currentSerial: "",
+  }));
+
+  toast({
+    title: "Serial Number Added",
+    description: `${serialValue} scanned and added successfully`,
+  });
+};
+
 
   const closeScanner = () => {
     setScannerState({ isOpen: false });
@@ -281,68 +312,32 @@ const InstallationReport = () => {
     });
   };
 
-  const updateQuickCheck = (index: number, value: boolean | null) => {
-    const newQuickCheck = [...formData.quickCheck];
-    newQuickCheck[index] = value;
-    setFormData({ ...formData, quickCheck: newQuickCheck });
-  };
+  
+// REPLACE your current updateQuickCheck with this exact code
+const updateQuickCheck = (deviceIndex: number, checkIndex: number, checked: boolean) => {
+  const updated = [...formData.serialNumbers];
+  const device = { ...(updated[deviceIndex] || { serial: "", quickCheck: [], qcVerified: false }) };
 
-  const handleQcComplete = () => {
-    if (qcStatus === "failed") {
-      // Update quickCheck array based on failed items
-      const newQuickCheck = [...formData.quickCheck];
-      quickCheckItems.forEach((_, index) => {
-        if (failedItems.includes(index)) {
-          newQuickCheck[index] = false;
-        } else {
-          newQuickCheck[index] = true;
-        }
-      });
-      setFormData({ ...formData, quickCheck: newQuickCheck });
-      
-      toast({
-        title: "QC Failed Items Recorded",
-        description: `${failedItems.length} item(s) marked as failed`,
-        variant: "destructive",
-      });
-    } else if (qcStatus === "passed") {
-      // Mark all items as passed
-      const newQuickCheck = Array(quickCheckItems.length).fill(true);
-      setFormData({ ...formData, quickCheck: newQuickCheck });
-      
-      toast({
-        title: "QC Passed",
-        description: "All quality checks passed successfully",
-      });
-    }
-    
-    setQcDialogOpen(false);
-    setQcStatus(null);
-    setFailedItems([]);
-  };
+  if (!device.quickCheck || !Array.isArray(device.quickCheck)) {
+    device.quickCheck = Array(quickCheckItems.length).fill(false);
+  }
 
-  const toggleFailedItem = (index: number) => {
-    setFailedItems(prev => 
-      prev.includes(index) 
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
-    );
-  };
+  // store strict boolean: checked === true means PASS, unchecked (false) means FAIL
+  device.quickCheck[checkIndex] = !!checked;
 
-  const updateDeviceAccessory = (deviceIndex: number, accessoryKey: string, checked: boolean) => {
-    const updated = [...formData.serialNumbers];
-    if (!updated[deviceIndex].accessories) {
-      updated[deviceIndex].accessories = {
-        stylus: false,
-        remote: false,
-        powerCable: false,
-        touchCable: false,
-        hdmiCable: false,
-      };
-    }
-    updated[deviceIndex].accessories[accessoryKey] = checked;
-    setFormData({ ...formData, serialNumbers: updated });
-  };
+  // qcVerified true only when ALL checks are true (all passed)
+  device.qcVerified = device.quickCheck.every(v => v === true);
+
+  updated[deviceIndex] = device;
+  setFormData({ ...formData, serialNumbers: updated });
+};
+
+
+
+
+
+
+
 
   // OTP Functions
   const sendOtp = async () => {
@@ -634,93 +629,126 @@ const InstallationReport = () => {
   };
 
   const handleSubmitReport = () => {
-    // Comprehensive validation
-    const validationErrors = [];
+  const validationErrors: string[] = [];
 
-    if (!formData.salesOrderNo.trim()) {
-      validationErrors.push("Sales Order Number is required");
-    }
+  if (!formData.salesOrderNo.trim()) {
+    validationErrors.push("Sales Order Number is required");
+  }
 
-    if (!schoolDataState.isFetched) {
-      validationErrors.push("Please fetch school details first");
-    }
+  if (!schoolDataState.isFetched) {
+    validationErrors.push("Please fetch school details first");
+  }
 
-    if (!formData.schoolName.trim()) {
-      validationErrors.push("School Name is required");
-    }
+  if (!formData.schoolName.trim()) {
+    validationErrors.push("School Name is required");
+  }
 
-    if (!formData.spocName.trim()) {
-      validationErrors.push("SPOC Name is required");
-    }
+  if (!formData.spocName.trim()) {
+    validationErrors.push("SPOC Name is required");
+  }
 
-    if (!formData.schoolAddress.trim()) {
-      validationErrors.push("School Address is required");
-    }
+  if (!formData.schoolAddress.trim()) {
+    validationErrors.push("School Address is required");
+  }
 
-    if (!formData.totalIFPQty || parseInt(formData.totalIFPQty) === 0) {
-      validationErrors.push("Total IFP Quantity is required");
-    }
+  if (!formData.totalIFPQty || parseInt(formData.totalIFPQty) === 0) {
+    validationErrors.push("Total IFP Quantity is required");
+  }
 
-    if (formData.serialNumbers.length === 0) {
-      validationErrors.push("At least one serial number is required");
-    }
+  if (formData.serialNumbers.length === 0) {
+    validationErrors.push("At least one serial number is required");
+  }
 
-    const expectedQty = parseInt(formData.totalIFPQty) || 0;
-    if (formData.serialNumbers.length !== expectedQty) {
-      validationErrors.push(`Serial numbers count (${formData.serialNumbers.length}) must match IFP quantity (${expectedQty})`);
-    }
+  const expectedQty = parseInt(formData.totalIFPQty) || 0;
+  if (formData.serialNumbers.length !== expectedQty) {
+    validationErrors.push(
+      `Serial numbers count (${formData.serialNumbers.length}) must match IFP quantity (${expectedQty})`
+    );
+  }
 
-    if (!formData.engineerName.trim()) {
-      validationErrors.push("Engineer Name is required");
-    }
+  if (!formData.engineerName.trim()) {
+    validationErrors.push("Engineer Name is required");
+  }
 
-    if (!formData.engineerContact.trim()) {
-      validationErrors.push("Engineer Contact is required");
-    }
+  if (!formData.engineerContact.trim()) {
+    validationErrors.push("Engineer Contact is required");
+  }
 
-    if (!formData.schoolOwnerEmail.trim()) {
-      validationErrors.push("School Owner Email is required");
-    }
+  if (!formData.schoolOwnerEmail.trim()) {
+    validationErrors.push("School Owner Email is required");
+  }
 
-    if (!signatureState.isSigned) {
-      validationErrors.push("Digital signature is required");
-    }
+  if (!signatureState.isSigned) {
+    validationErrors.push("Digital signature is required");
+  }
 
-    if (!otpState.isOtpVerified) {
-      validationErrors.push("Mobile number verification is required");
-    }
+  if (!otpState.isOtpVerified) {
+    validationErrors.push("Mobile number verification is required");
+  }
 
-    if (!formData.agreement) {
-      validationErrors.push("Agreement acceptance is required");
-    }
+  if (!formData.agreement) {
+    validationErrors.push("Agreement acceptance is required");
+  }
 
-    // Check if any quick check item is marked as "No"
-    const failedChecks = formData.quickCheck
-      .map((value, index) => ({ value, index }))
-      .filter(item => item.value === false)
-      .map(item => quickCheckItems[item.index]);
+  // 🔎 Check QC
+ 
 
-    if (failedChecks.length > 0) {
-      validationErrors.push(`Please resolve failed checks: ${failedChecks.join(', ')}`);
-    }
-
-    if (validationErrors.length > 0) {
-      toast({
-        title: "Validation Failed",
-        description: validationErrors[0], // Show first error
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Clear saved data from localStorage on successful submission
-    clearSavedData();
-    
-    toast({
-      title: "Report Submitted Successfully",
-      description: "Installation report has been submitted and saved",
-    });
+  const updatedSerials = formData.serialNumbers.map((device) => {
+  // checked=true means PASS. So "hasFailed" is true if ANY check is NOT true (i.e. unchecked)
+  const hasFailed = device.quickCheck?.some((value) => value !== true);
+  return {
+    ...device,
+    qcVerified: !hasFailed, // true only when there are no failures
   };
+});
+
+
+const failedChecks: string[] = [];
+formData.serialNumbers.forEach((device, deviceIndex) => {
+  device.quickCheck?.forEach((value, checkIndex) => {
+    // Now: value !== true means the quick-check item is UNCHECKED => FAIL
+    if (value !== true) {
+      failedChecks.push(
+        `Device #${deviceIndex + 1} (${device.serial}): ${quickCheckItems[checkIndex]}`
+      );
+    }
+  });
+});
+if (failedChecks.length > 0) {
+  toast({
+    title: "QC Failed",
+    description: `Please resolve the following failed checks: ${failedChecks.join(", ")}`,
+    variant: "destructive",
+  });
+  // Save QC state so UI shows qcVerified correctly and keep form editable
+  setFormData({ ...formData, serialNumbers: updatedSerials });
+  return; // stop submission until failures are resolved
+}
+
+// If no failed checks, persist verified QC state
+setFormData({ ...formData, serialNumbers: updatedSerials });
+// ✅ Save verified QC state
+setFormData({ ...formData, serialNumbers: updatedSerials });
+
+  if (validationErrors.length > 0) {
+    toast({
+      title: "Validation Failed",
+      description: validationErrors[0],
+      variant: "destructive",
+    });
+    return;
+  }
+
+  // ✅ Save verified QC state
+  setFormData({ ...formData, serialNumbers: updatedSerials });
+
+  clearSavedData();
+
+  toast({
+    title: "Report Submitted Successfully",
+    description: "Installation report has been submitted and saved",
+  });
+};
 
   return (
     <div className="min-h-screen bg-gradient-secondary">
@@ -730,8 +758,9 @@ const InstallationReport = () => {
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-2">
               <ShieldCheckIcon className="h-8 w-8" />
-              <h1 className="text-3xl font-bold">Installation & Service Report</h1>
+              <h1 className="text-3xl font-bold">TV & IFP Installation & Service Report</h1>
             </div>
+           
           </div>
         </div>
       </div>
@@ -931,94 +960,6 @@ const InstallationReport = () => {
             </Button>
           </div>
 
-          {/* Device-specific toggles */}
-          <div className="flex gap-2 flex-wrap mb-2">
-            {(() => {
-              // Calculate QC status
-              const hasFailedQC = formData.quickCheck && formData.quickCheck.some(check => !check);
-              const failedQcItems = formData.quickCheck ? 
-                quickCheckItems.filter((_, idx) => !formData.quickCheck[idx]) : [];
-              
-              return (
-                <div className="flex flex-col gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setQcDialogOpen(true);
-                    }}
-                    className={`flex items-center gap-1 h-8 text-xs ${
-                      hasFailedQC ? 'border-red-200 text-red-600' : 
-                      formData.quickCheck && formData.quickCheck.every(check => check) ? 'border-green-200 text-green-600' : ''
-                    }`}
-                  >
-                    {hasFailedQC ? (
-                      <>❌ QC Failed</>
-                    ) : formData.quickCheck && formData.quickCheck.every(check => check) ? (
-                      <>✅ QC Passed</>
-                    ) : (
-                      <><CheckCircle2Icon className="h-3 w-3" /> QC Check</>
-                    )}
-                  </Button>
-                  {hasFailedQC && failedQcItems.length > 0 && (
-                    <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded border">
-                      Failed: {failedQcItems.join(', ')}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-            
-            {(() => {
-              // Calculate Accessories status
-              const accessories = [
-                { key: 'stylus', label: 'Stylus (2N)' },
-                { key: 'remote', label: 'Remote' },
-                { key: 'powerCable', label: 'Power Cable' },
-                { key: 'touchCable', label: 'Touch Cable' },
-                { key: 'hdmiCable', label: 'HDMI Cable' }
-              ];
-              
-              const deviceAccessories = typeof item !== 'string' ? item.accessories : null;
-              const checkedAccessories = accessories.filter(acc => deviceAccessories?.[acc.key]);
-              const missingAccessories = accessories.filter(acc => !deviceAccessories?.[acc.key]);
-              const allReceived = checkedAccessories.length === accessories.length;
-              const hasAnyAccessories = deviceAccessories && Object.values(deviceAccessories).some(Boolean);
-              
-              return (
-                <div className="flex flex-col gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setCurrentDeviceIndex(index);
-                      setAccessoriesDialogOpen(true);
-                    }}
-                    className={`flex items-center gap-1 h-8 text-xs ${
-                      hasAnyAccessories && !allReceived ? 'border-red-200 text-red-600' : 
-                      allReceived ? 'border-green-200 text-green-600' : ''
-                    }`}
-                  >
-                    {hasAnyAccessories && !allReceived ? (
-                      <>❌ Accessories Missing</>
-                    ) : allReceived ? (
-                      <>✅ All Accessories Received</>
-                    ) : (
-                      <>📦 Accessories</>
-                    )}
-                  </Button>
-                  {hasAnyAccessories && !allReceived && missingAccessories.length > 0 && (
-                    <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded border">
-                      Missing: {missingAccessories.map(acc => acc.label).join(', ')}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-
           <div className="flex flex-col sm:flex-row items-center gap-2">
             {/* Single Image Upload - Simplified */}
             {(typeof item !== 'string' && !item.image) || (typeof item === 'string') ? (
@@ -1066,9 +1007,6 @@ const InstallationReport = () => {
                             title: "Photo Added Successfully",
                             description: `${processedFile.name} uploaded and processed`,
                           });
-
-                          // Show QC dialog after adding photo
-                          setQcDialogOpen(true);
                         };
                         reader.readAsDataURL(processedFile);
                       } catch (error) {
@@ -1181,6 +1119,95 @@ const InstallationReport = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Accessories */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg bg-table-header px-4 py-2 rounded">
+              Accessories Received
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="stylus"
+                  checked={formData.accessories.stylus}
+                  onCheckedChange={(checked) => updateAccessory("stylus", checked as boolean)}
+                />
+                <Label htmlFor="stylus">Stylus (2N)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remote"
+                  checked={formData.accessories.remote}
+                  onCheckedChange={(checked) => updateAccessory("remote", checked as boolean)}
+                />
+                <Label htmlFor="remote">Remote</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="powerCable"
+                  checked={formData.accessories.powerCable}
+                  onCheckedChange={(checked) => updateAccessory("powerCable", checked as boolean)}
+                />
+                <Label htmlFor="powerCable">Power Cable</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="touchCable"
+                  checked={formData.accessories.touchCable}
+                  onCheckedChange={(checked) => updateAccessory("touchCable", checked as boolean)}
+                />
+                <Label htmlFor="touchCable">Touch Cable</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hdmiCable"
+                  checked={formData.accessories.hdmiCable}
+                  onCheckedChange={(checked) => updateAccessory("hdmiCable", checked as boolean)}
+                />
+                <Label htmlFor="hdmiCable">HDMI cable</Label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Check */}
+        <Card className="mb-6">
+  <CardHeader>
+    <CardTitle className="text-lg bg-table-header px-4 py-2 rounded">
+      Interactive Display Quick Check
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="grid grid-cols-1 md:grid-cols-2 relative gap-8">
+      {/* Vertical divider */}
+      <div className="hidden md:block absolute left-1/2 top-0 h-full w-px bg-gray-300" />
+
+      {formData.serialNumbers.map((device, deviceIndex) => (
+  <div key={deviceIndex} className="p-4 border rounded-md bg-gray-50 space-y-4">
+    <h4 className="font-semibold">QC for Serial #{deviceIndex + 1}: {device.serial}</h4>
+
+    {quickCheckItems.map((item, checkIndex) => (
+      <div key={checkIndex} className="flex items-center justify-between gap-4">
+        <Label className="text-sm font-medium w-2/3 pr-2 flex items-center gap-2">
+          <span className="text-primary">★</span>
+          <span>{item}</span>
+        </Label>
+
+        <Checkbox
+  checked={device.quickCheck?.[checkIndex] === true}
+  onCheckedChange={(checked) => updateQuickCheck(deviceIndex, checkIndex, checked === true)}
+  disabled={device.qcVerified === true}
+/>
+  </div>
+))}
+  </div>
+))}
+    </div>
+  </CardContent>
+</Card>
 
 
         {/* Engineer Information */}
@@ -1525,213 +1552,6 @@ const InstallationReport = () => {
           onScan={handleScanResult}
           onClose={closeScanner}
         />
-
-        {/* QC Dialog */}
-        <Dialog open={qcDialogOpen} onOpenChange={setQcDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CheckCircle2Icon className="h-6 w-6" />
-                Interactive Display Quick Check
-              </DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              {/* Dynamic Status Display */}
-              <div className="p-4 border rounded-lg bg-card">
-                {failedItems.length === 0 ? (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <span className="text-2xl">✅</span>
-                    <span className="font-semibold text-lg">QC Passed</span>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-red-600">
-                      <span className="text-2xl">❌</span>
-                      <span className="font-semibold text-lg">QC Failed</span>
-                    </div>
-                    <div className="bg-red-50 p-3 rounded border border-red-200">
-                      <p className="text-sm font-medium text-red-800 mb-2">Failed Items:</p>
-                      <ul className="text-sm text-red-700 space-y-1">
-                        {failedItems.map(index => (
-                          <li key={index} className="flex items-start gap-2">
-                            <span className="text-red-500 mt-0.5">•</span>
-                            {quickCheckItems[index]}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Please perform the following quality checks on the installed device:
-                </p>
-                
-                <div className="space-y-3">
-                  {quickCheckItems.map((item, index) => (
-                    <div key={index} className={`flex items-center justify-between p-3 rounded border ${
-                      failedItems.includes(index) ? 'bg-red-50 border-red-200' : 'bg-background'
-                    }`}>
-                      <span className="text-sm font-medium flex items-center gap-2">
-                        <span className="text-primary">★</span>
-                        {item}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {failedItems.includes(index) ? 'Failed' : 'Passed'}
-                        </span>
-                        <Checkbox
-                          checked={failedItems.includes(index)}
-                          onCheckedChange={() => toggleFailedItem(index)}
-                          className="h-5 w-5"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setQcDialogOpen(false);
-                    setQcStatus(null);
-                    setFailedItems([]);
-                  }}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleQcComplete}
-                  className="flex-1"
-                >
-                  Complete QC
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Accessories Dialog */}
-        <Dialog open={accessoriesDialogOpen} onOpenChange={setAccessoriesDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                📦 Accessories Received
-              </DialogTitle>
-            </DialogHeader>
-            
-            {currentDeviceIndex !== null && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Device: {typeof formData.serialNumbers[currentDeviceIndex] === 'string' 
-                    ? formData.serialNumbers[currentDeviceIndex] 
-                    : formData.serialNumbers[currentDeviceIndex].serial}
-                </p>
-
-                {(() => {
-                  const accessories = [
-                    { key: 'stylus', label: 'Stylus (2N)' },
-                    { key: 'remote', label: 'Remote' },
-                    { key: 'powerCable', label: 'Power Cable' },
-                    { key: 'touchCable', label: 'Touch Cable' },
-                    { key: 'hdmiCable', label: 'HDMI Cable' }
-                  ];
-                  
-                  const checkedAccessories = accessories.filter(acc => 
-                    formData.serialNumbers[currentDeviceIndex]?.accessories?.[acc.key]
-                  );
-                  const missingAccessories = accessories.filter(acc => 
-                    !formData.serialNumbers[currentDeviceIndex]?.accessories?.[acc.key]
-                  );
-                  
-                  const allReceived = checkedAccessories.length === accessories.length;
-
-                  return (
-                    <>
-                      {/* Dynamic Status Display */}
-                      <div className="p-4 border rounded-lg bg-card">
-                        {allReceived ? (
-                          <div className="flex items-center gap-2 text-green-600">
-                            <span className="text-2xl">✅</span>
-                            <span className="font-semibold text-lg">All Accessories Received</span>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-red-600">
-                              <span className="text-2xl">❌</span>
-                              <span className="font-semibold text-lg">Accessory Missing</span>
-                            </div>
-                            {missingAccessories.length > 0 && (
-                              <div className="bg-red-50 p-3 rounded border border-red-200">
-                                <p className="text-sm font-medium text-red-800 mb-2">Missing Accessories:</p>
-                                <ul className="text-sm text-red-700 space-y-1">
-                                  {missingAccessories.map(acc => (
-                                    <li key={acc.key} className="flex items-start gap-2">
-                                      <span className="text-red-500 mt-0.5">•</span>
-                                      {acc.label}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                
-                      <div className="space-y-3">
-                        {accessories.map(({ key, label }) => {
-                          const isChecked = formData.serialNumbers[currentDeviceIndex]?.accessories?.[key] || false;
-                          return (
-                            <div key={key} className={`flex items-center justify-between p-3 rounded border ${
-                              isChecked ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-                            }`}>
-                              <Label htmlFor={`accessory-${key}`} className="text-sm font-medium">
-                                {label}
-                              </Label>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-xs font-medium ${
-                                  isChecked ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {isChecked ? 'Received' : 'Missing'}
-                                </span>
-                                <Checkbox
-                                  id={`accessory-${key}`}
-                                  checked={isChecked}
-                                  onCheckedChange={(checked) => 
-                                    updateDeviceAccessory(currentDeviceIndex, key, !!checked)
-                                  }
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  );
-                })()}
-
-                <div className="flex gap-2 pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setAccessoriesDialogOpen(false);
-                      setCurrentDeviceIndex(null);
-                    }}
-                    className="flex-1"
-                  >
-                    Close
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );
