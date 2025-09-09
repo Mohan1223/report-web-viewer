@@ -1123,58 +1123,6 @@ const InstallationReport = () => {
           </CardContent>
         </Card>
 
-        {/* Accessories */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg bg-table-header px-4 py-2 rounded">
-              Accessories Received
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="stylus"
-                  checked={formData.accessories.stylus}
-                  onCheckedChange={(checked) => updateAccessory("stylus", checked as boolean)}
-                />
-                <Label htmlFor="stylus">Stylus (2N)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remote"
-                  checked={formData.accessories.remote}
-                  onCheckedChange={(checked) => updateAccessory("remote", checked as boolean)}
-                />
-                <Label htmlFor="remote">Remote</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="powerCable"
-                  checked={formData.accessories.powerCable}
-                  onCheckedChange={(checked) => updateAccessory("powerCable", checked as boolean)}
-                />
-                <Label htmlFor="powerCable">Power Cable</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="touchCable"
-                  checked={formData.accessories.touchCable}
-                  onCheckedChange={(checked) => updateAccessory("touchCable", checked as boolean)}
-                />
-                <Label htmlFor="touchCable">Touch Cable</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hdmiCable"
-                  checked={formData.accessories.hdmiCable}
-                  onCheckedChange={(checked) => updateAccessory("hdmiCable", checked as boolean)}
-                />
-                <Label htmlFor="hdmiCable">HDMI cable</Label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Engineer Information */}
         <Card className="mb-6">
