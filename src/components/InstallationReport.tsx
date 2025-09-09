@@ -1530,6 +1530,34 @@ const InstallationReport = () => {
             </DialogHeader>
             
             <div className="space-y-4">
+              {/* Dynamic Status Display */}
+              <div className="p-4 border rounded-lg bg-card">
+                {failedItems.length === 0 ? (
+                  <div className="flex items-center gap-2 text-green-600">
+                    <span className="text-2xl">✅</span>
+                    <span className="font-semibold text-lg">QC Passed</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-red-600">
+                      <span className="text-2xl">❌</span>
+                      <span className="font-semibold text-lg">QC Failed</span>
+                    </div>
+                    <div className="bg-red-50 p-3 rounded border border-red-200">
+                      <p className="text-sm font-medium text-red-800 mb-2">Failed Items:</p>
+                      <ul className="text-sm text-red-700 space-y-1">
+                        {failedItems.map(index => (
+                          <li key={index} className="flex items-start gap-2">
+                            <span className="text-red-500 mt-0.5">•</span>
+                            {quickCheckItems[index]}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground mb-4">
                   Please perform the following quality checks on the installed device:
@@ -1537,44 +1565,27 @@ const InstallationReport = () => {
                 
                 <div className="space-y-3">
                   {quickCheckItems.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-background rounded border">
+                    <div key={index} className={`flex items-center justify-between p-3 rounded border ${
+                      failedItems.includes(index) ? 'bg-red-50 border-red-200' : 'bg-background'
+                    }`}>
                       <span className="text-sm font-medium flex items-center gap-2">
                         <span className="text-primary">★</span>
                         {item}
                       </span>
-                      <Checkbox
-                        checked={failedItems.includes(index)}
-                        onCheckedChange={() => toggleFailedItem(index)}
-                        className="h-5 w-5"
-                      />
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {failedItems.includes(index) ? 'Failed' : 'Passed'}
+                        </span>
+                        <Checkbox
+                          checked={failedItems.includes(index)}
+                          onCheckedChange={() => toggleFailedItem(index)}
+                          className="h-5 w-5"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-
-              <div className="space-y-3">
-                <Label>QC Status</Label>
-                <Select value={qcStatus || ""} onValueChange={(value: "passed" | "failed") => setQcStatus(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select QC status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="passed">✅ QC Passed - All checks OK</SelectItem>
-                    <SelectItem value="failed">❌ QC Failed - Some items need attention</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {qcStatus === "failed" && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded">
-                  <p className="text-sm text-destructive font-medium">
-                    Please check the items above that failed the quality check.
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Selected failed items: {failedItems.length}
-                  </p>
-                </div>
-              )}
 
               <div className="flex gap-2 pt-4">
                 <Button 
@@ -1590,7 +1601,6 @@ const InstallationReport = () => {
                 </Button>
                 <Button 
                   onClick={handleQcComplete}
-                  disabled={!qcStatus}
                   className="flex-1"
                 >
                   Complete QC
@@ -1616,29 +1626,88 @@ const InstallationReport = () => {
                     ? formData.serialNumbers[currentDeviceIndex] 
                     : formData.serialNumbers[currentDeviceIndex].serial}
                 </p>
-                
-                <div className="space-y-3">
-                  {[
+
+                {(() => {
+                  const accessories = [
                     { key: 'stylus', label: 'Stylus (2N)' },
                     { key: 'remote', label: 'Remote' },
                     { key: 'powerCable', label: 'Power Cable' },
                     { key: 'touchCable', label: 'Touch Cable' },
                     { key: 'hdmiCable', label: 'HDMI Cable' }
-                  ].map(({ key, label }) => (
-                    <div key={key} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`accessory-${key}`}
-                        checked={formData.serialNumbers[currentDeviceIndex]?.accessories?.[key] || false}
-                        onCheckedChange={(checked) => 
-                          updateDeviceAccessory(currentDeviceIndex, key, !!checked)
-                        }
-                      />
-                      <Label htmlFor={`accessory-${key}`} className="text-sm">
-                        {label}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+                  ];
+                  
+                  const checkedAccessories = accessories.filter(acc => 
+                    formData.serialNumbers[currentDeviceIndex]?.accessories?.[acc.key]
+                  );
+                  const missingAccessories = accessories.filter(acc => 
+                    !formData.serialNumbers[currentDeviceIndex]?.accessories?.[acc.key]
+                  );
+                  
+                  const allReceived = checkedAccessories.length === accessories.length;
+
+                  return (
+                    <>
+                      {/* Dynamic Status Display */}
+                      <div className="p-4 border rounded-lg bg-card">
+                        {allReceived ? (
+                          <div className="flex items-center gap-2 text-green-600">
+                            <span className="text-2xl">✅</span>
+                            <span className="font-semibold text-lg">All Accessories Received</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-red-600">
+                              <span className="text-2xl">❌</span>
+                              <span className="font-semibold text-lg">Accessory Missing</span>
+                            </div>
+                            {missingAccessories.length > 0 && (
+                              <div className="bg-red-50 p-3 rounded border border-red-200">
+                                <p className="text-sm font-medium text-red-800 mb-2">Missing Accessories:</p>
+                                <ul className="text-sm text-red-700 space-y-1">
+                                  {missingAccessories.map(acc => (
+                                    <li key={acc.key} className="flex items-start gap-2">
+                                      <span className="text-red-500 mt-0.5">•</span>
+                                      {acc.label}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                
+                      <div className="space-y-3">
+                        {accessories.map(({ key, label }) => {
+                          const isChecked = formData.serialNumbers[currentDeviceIndex]?.accessories?.[key] || false;
+                          return (
+                            <div key={key} className={`flex items-center justify-between p-3 rounded border ${
+                              isChecked ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                            }`}>
+                              <Label htmlFor={`accessory-${key}`} className="text-sm font-medium">
+                                {label}
+                              </Label>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-medium ${
+                                  isChecked ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {isChecked ? 'Received' : 'Missing'}
+                                </span>
+                                <Checkbox
+                                  id={`accessory-${key}`}
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => 
+                                    updateDeviceAccessory(currentDeviceIndex, key, !!checked)
+                                  }
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
 
                 <div className="flex gap-2 pt-4">
                   <Button 
