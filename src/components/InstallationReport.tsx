@@ -263,7 +263,7 @@ const InstallationReport = () => {
     });
 
     // Show QC dialog after adding barcode
-    setQcDialogOpen(true);
+    openQcDialog();
   };
 
   const closeScanner = () => {
@@ -285,6 +285,20 @@ const InstallationReport = () => {
     const newQuickCheck = [...formData.quickCheck];
     newQuickCheck[index] = value;
     setFormData({ ...formData, quickCheck: newQuickCheck });
+  };
+
+  const openQcDialog = () => {
+    // Initialize failedItems from current quickCheck state
+    const currentFailedItems: number[] = [];
+    if (formData.quickCheck) {
+      formData.quickCheck.forEach((isChecked, index) => {
+        if (!isChecked) {
+          currentFailedItems.push(index);
+        }
+      });
+    }
+    setFailedItems(currentFailedItems);
+    setQcDialogOpen(true);
   };
 
   const handleQcComplete = () => {
@@ -941,7 +955,7 @@ const InstallationReport = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setQcDialogOpen(true);
+                      openQcDialog();
                     }}
                     className={`flex items-center gap-1 h-8 text-xs ${
                       hasAnyChecks && !hasFailedQC ? 'border-green-200 text-green-600' : 
@@ -1063,7 +1077,7 @@ const InstallationReport = () => {
                           });
 
                           // Show QC dialog after adding photo
-                          setQcDialogOpen(true);
+                          openQcDialog();
                         };
                         reader.readAsDataURL(processedFile);
                       } catch (error) {
