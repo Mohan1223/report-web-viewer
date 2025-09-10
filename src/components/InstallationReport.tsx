@@ -934,10 +934,11 @@ const InstallationReport = () => {
           {/* Device-specific toggles */}
           <div className="flex gap-2 flex-wrap mb-2">
             {(() => {
-              // Calculate QC status
-              const hasFailedQC = formData.quickCheck && formData.quickCheck.some(check => !check);
-              const failedQcItems = formData.quickCheck ? 
-                quickCheckItems.filter((_, idx) => !formData.quickCheck[idx]) : [];
+              // Calculate QC status - Initialize array if not set
+              const qcChecks = formData.quickCheck || Array(quickCheckItems.length).fill(false);
+              const hasFailedQC = qcChecks.some(check => !check);
+              const failedQcItems = quickCheckItems.filter((_, idx) => !qcChecks[idx]);
+              const hasAnyChecks = qcChecks.some(check => check);
               
               return (
                 <div className="flex flex-col gap-1">
@@ -949,19 +950,19 @@ const InstallationReport = () => {
                       setQcDialogOpen(true);
                     }}
                     className={`flex items-center gap-1 h-8 text-xs ${
-                      hasFailedQC ? 'border-red-200 text-red-600' : 
-                      formData.quickCheck && formData.quickCheck.every(check => check) ? 'border-green-200 text-green-600' : ''
+                      hasAnyChecks && !hasFailedQC ? 'border-green-200 text-green-600' : 
+                      hasAnyChecks && hasFailedQC ? 'border-red-200 text-red-600' : ''
                     }`}
                   >
-                    {hasFailedQC ? (
-                      <>❌ QC Failed</>
-                    ) : formData.quickCheck && formData.quickCheck.every(check => check) ? (
+                    {hasAnyChecks && !hasFailedQC ? (
                       <>✅ QC Passed</>
+                    ) : hasAnyChecks && hasFailedQC ? (
+                      <>❌ QC Failed</>
                     ) : (
                       <><CheckCircle2Icon className="h-3 w-3" /> QC Check</>
                     )}
                   </Button>
-                  {hasFailedQC && failedQcItems.length > 0 && (
+                  {hasAnyChecks && hasFailedQC && failedQcItems.length > 0 && (
                     <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded border">
                       Failed: {failedQcItems.join(', ')}
                     </div>
