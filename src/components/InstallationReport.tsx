@@ -263,7 +263,7 @@ const InstallationReport = () => {
     });
 
     // Show QC dialog after adding barcode
-    openQcDialog();
+    openQcDialog(false);
   };
 
   const closeScanner = () => {
@@ -287,15 +287,56 @@ const InstallationReport = () => {
     setFormData({ ...formData, quickCheck: newQuickCheck });
   };
 
-  const openQcDialog = () => {
-    // Initialize failedItems from current quickCheck state
+  const handleAccessoriesSubmit = () => {
+    if (currentDeviceIndex !== null) {
+      const accessories = [
+        { key: 'stylus', label: 'Stylus (2N)' },
+        { key: 'remote', label: 'Remote' },
+        { key: 'powerCable', label: 'Power Cable' },
+        { key: 'touchCable', label: 'Touch Cable' },
+        { key: 'hdmiCable', label: 'HDMI Cable' }
+      ];
+      
+      const checkedAccessories = accessories.filter(acc => 
+        formData.serialNumbers[currentDeviceIndex]?.accessories?.[acc.key]
+      );
+      const missingAccessories = accessories.filter(acc => 
+        !formData.serialNumbers[currentDeviceIndex]?.accessories?.[acc.key]
+      );
+      
+      if (missingAccessories.length > 0) {
+        toast({
+          title: "Accessories Missing",
+          description: `${missingAccessories.length} accessory(ies) are missing`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "All Accessories Received",
+          description: "All accessories have been verified",
+        });
+      }
+    }
+    
+    setAccessoriesDialogOpen(false);
+    setCurrentDeviceIndex(null);
+  };
+
+  const openQcDialog = (preserveState = true) => {
+    // Initialize failedItems from current quickCheck state only if preserveState is true
     const currentFailedItems: number[] = [];
-    if (formData.quickCheck) {
+    if (preserveState && formData.quickCheck) {
       formData.quickCheck.forEach((isChecked, index) => {
         if (!isChecked) {
           currentFailedItems.push(index);
         }
       });
+    }
+    // If preserveState is false (new scan), start with all items unchecked (all failed)
+    if (!preserveState) {
+      for (let i = 0; i < quickCheckItems.length; i++) {
+        currentFailedItems.push(i);
+      }
     }
     setFailedItems(currentFailedItems);
     setQcDialogOpen(true);
@@ -1077,7 +1118,7 @@ const InstallationReport = () => {
                           });
 
                           // Show QC dialog after adding photo
-                          openQcDialog();
+                          openQcDialog(false);
                         };
                         reader.readAsDataURL(processedFile);
                       } catch (error) {
@@ -1619,7 +1660,7 @@ const InstallationReport = () => {
                   onClick={handleQcComplete}
                   className="flex-1"
                 >
-                  Complete QC
+                  Submit
                 </Button>
               </div>
             </div>
@@ -1734,7 +1775,13 @@ const InstallationReport = () => {
                     }}
                     className="flex-1"
                   >
-                    Close
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleAccessoriesSubmit}
+                    className="flex-1"
+                  >
+                    Submit
                   </Button>
                 </div>
               </div>
