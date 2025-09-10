@@ -1584,7 +1584,7 @@ const InstallationReport = () => {
                           {failedItems.includes(index) ? 'Failed' : 'Passed'}
                         </span>
                         <Checkbox
-                          checked={failedItems.includes(index)}
+                          checked={!failedItems.includes(index)}
                           onCheckedChange={() => toggleFailedItem(index)}
                           className="h-5 w-5"
                         />
