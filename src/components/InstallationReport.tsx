@@ -288,28 +288,22 @@ const InstallationReport = () => {
   };
 
   const handleQcComplete = () => {
-    if (qcStatus === "failed") {
-      // Update quickCheck array based on failed items
-      const newQuickCheck = [...formData.quickCheck];
-      quickCheckItems.forEach((_, index) => {
-        if (failedItems.includes(index)) {
-          newQuickCheck[index] = false;
-        } else {
-          newQuickCheck[index] = true;
-        }
-      });
-      setFormData({ ...formData, quickCheck: newQuickCheck });
-      
+    // Always update quickCheck array based on current failedItems state
+    const newQuickCheck = Array(quickCheckItems.length).fill(true);
+    failedItems.forEach(index => {
+      newQuickCheck[index] = false;
+    });
+    
+    setFormData({ ...formData, quickCheck: newQuickCheck });
+    
+    // Show appropriate toast based on results
+    if (failedItems.length > 0) {
       toast({
         title: "QC Failed Items Recorded",
         description: `${failedItems.length} item(s) marked as failed`,
         variant: "destructive",
       });
-    } else if (qcStatus === "passed") {
-      // Mark all items as passed
-      const newQuickCheck = Array(quickCheckItems.length).fill(true);
-      setFormData({ ...formData, quickCheck: newQuickCheck });
-      
+    } else {
       toast({
         title: "QC Passed",
         description: "All quality checks passed successfully",
