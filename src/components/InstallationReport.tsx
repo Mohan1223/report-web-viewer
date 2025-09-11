@@ -38,7 +38,7 @@ const InstallationReport = () => {
       touchCable: false,
       hdmiCable: false,
     },
-    quickCheck: Array(15).fill(null),
+    quickCheck: Array(16).fill(null),
     engineerName: "",
     engineerContact: "",
     schoolOwnerEmail: "",
@@ -850,8 +850,8 @@ const InstallationReport = () => {
 
               {/* Show fetched details */}
               {schoolDataState.isFetched && (
-                <div className="space-y-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-800 mb-3">
+                <div className="space-y-4 p-4 bg-success-background border border-success-border rounded-lg">
+                  <div className="flex items-center gap-2 text-success mb-3">
                     <CheckCircle2Icon className="h-5 w-5" />
                     <span className="font-medium">School details fetched successfully</span>
                   </div>
@@ -999,8 +999,8 @@ const InstallationReport = () => {
                       openQcDialog();
                     }}
                     className={`flex items-center gap-1 h-8 text-xs ${
-                      hasAnyChecks && !hasFailedQC ? 'border-green-200 text-green-600' : 
-                      hasAnyChecks && hasFailedQC ? 'border-red-200 text-red-600' : ''
+                      hasAnyChecks && !hasFailedQC ? 'border-success-border text-success' : 
+                      hasAnyChecks && hasFailedQC ? 'border-error-border text-error' : ''
                     }`}
                   >
                     {hasAnyChecks && !hasFailedQC ? (
@@ -1012,7 +1012,7 @@ const InstallationReport = () => {
                     )}
                   </Button>
                   {hasAnyChecks && hasFailedQC && failedQcItems.length > 0 && (
-                    <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded border">
+                    <div className="text-xs text-error bg-error-background px-2 py-1 rounded border border-error-border">
                       Failed: {failedQcItems.join(', ')}
                     </div>
                   )}
@@ -1047,8 +1047,8 @@ const InstallationReport = () => {
                       setAccessoriesDialogOpen(true);
                     }}
                     className={`flex items-center gap-1 h-8 text-xs ${
-                      hasAnyAccessories && !allReceived ? 'border-red-200 text-red-600' : 
-                      allReceived ? 'border-green-200 text-green-600' : ''
+                      hasAnyAccessories && !allReceived ? 'border-error-border text-error' : 
+                      allReceived ? 'border-success-border text-success' : ''
                     }`}
                   >
                     {hasAnyAccessories && !allReceived ? (
@@ -1060,7 +1060,7 @@ const InstallationReport = () => {
                     )}
                   </Button>
                   {hasAnyAccessories && !allReceived && missingAccessories.length > 0 && (
-                    <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded border">
+                    <div className="text-xs text-error bg-error-background px-2 py-1 rounded border border-error-border">
                       Missing: {missingAccessories.map(acc => acc.label).join(', ')}
                     </div>
                   )}
@@ -1137,7 +1137,7 @@ const InstallationReport = () => {
 
             {typeof item !== 'string' && item.image && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-green-600 font-medium">
+                <span className="text-success font-medium">
                   📎 {item.fileName || 'image.jpg'}
                 </span>
                 <Button
@@ -1296,18 +1296,18 @@ const InstallationReport = () => {
               <div className="space-y-4">
                  {signatureState.isSigned ? (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <CheckCircle2Icon className="h-5 w-5 text-green-600" />
-                        <span className="font-medium text-green-800">Signature captured successfully</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={editSignature}
-                        className="border-green-300 text-green-700 hover:bg-green-100"
-                      >
+                     <div className="flex items-center justify-between p-4 bg-success-background border border-success-border rounded-lg">
+                       <div className="flex items-center gap-3">
+                         <CheckCircle2Icon className="h-5 w-5 text-success" />
+                         <span className="font-medium text-success">Signature captured successfully</span>
+                       </div>
+                       <Button
+                         type="button"
+                         variant="outline"
+                         size="sm"
+                         onClick={editSignature}
+                         className="border-success-border text-success hover:bg-success-background"
+                       >
                         <PenToolIcon className="h-4 w-4 mr-1" />
                         Edit Signature
                       </Button>
@@ -1375,17 +1375,16 @@ const InstallationReport = () => {
                                  maxWidth: '100%',
                                  height: 'auto'
                                }}
-                               onLoad={() => {
-                                 console.log("Canvas element loaded");
-                                 const canvas = canvasRef.current;
-                                 if (canvas) {
-                                   const ctx = canvas.getContext('2d');
-                                   if (ctx) {
-                                     ctx.fillStyle = '#ffffff';
-                                     ctx.fillRect(0, 0, canvas.width, canvas.height);
-                                   }
-                                 }
-                               }}
+                                onLoad={() => {
+                                  const canvas = canvasRef.current;
+                                  if (canvas) {
+                                    const ctx = canvas.getContext('2d');
+                                    if (ctx) {
+                                      ctx.fillStyle = '#ffffff';
+                                      ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                    }
+                                  }
+                                }}
                              />
                             <p className="text-xs text-muted-foreground mt-2 text-center">
                               Sign above using your mouse, stylus, or finger
@@ -1442,7 +1441,7 @@ const InstallationReport = () => {
                           setFormData({ ...formData, mobileNumber: value });
                         }}
                         disabled={otpState.isOtpVerified}
-                        className={otpState.isOtpVerified ? "bg-green-50" : ""}
+                        className={otpState.isOtpVerified ? "bg-success-background" : ""}
                       />
                       <Button
                         type="button"
@@ -1493,7 +1492,7 @@ const InstallationReport = () => {
                 </div>
 
                 {otpState.isOtpVerified && (
-                  <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-md">
+                  <div className="flex items-center gap-2 text-success bg-success-background p-3 rounded-md">
                     <ShieldCheckIcon className="h-5 w-5" />
                     <span className="font-medium">Mobile number verified successfully</span>
                   </div>
@@ -1590,22 +1589,22 @@ const InstallationReport = () => {
               {/* Dynamic Status Display */}
               <div className="p-4 border rounded-lg bg-card">
                 {failedItems.length === 0 ? (
-                  <div className="flex items-center gap-2 text-green-600">
+                  <div className="flex items-center gap-2 text-success">
                     <span className="text-2xl">✅</span>
                     <span className="font-semibold text-lg">QC Passed</span>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-red-600">
+                    <div className="flex items-center gap-2 text-error">
                       <span className="text-2xl">❌</span>
                       <span className="font-semibold text-lg">QC Failed</span>
                     </div>
-                    <div className="bg-red-50 p-3 rounded border border-red-200">
-                      <p className="text-sm font-medium text-red-800 mb-2">Failed Items:</p>
-                      <ul className="text-sm text-red-700 space-y-1">
+                    <div className="bg-error-background p-3 rounded border border-error-border">
+                      <p className="text-sm font-medium text-error mb-2">Failed Items:</p>
+                      <ul className="text-sm text-error space-y-1">
                         {failedItems.map(index => (
                           <li key={index} className="flex items-start gap-2">
-                            <span className="text-red-500 mt-0.5">•</span>
+                            <span className="text-error mt-0.5">•</span>
                             {quickCheckItems[index]}
                           </li>
                         ))}
@@ -1623,7 +1622,7 @@ const InstallationReport = () => {
                 <div className="space-y-3">
                   {quickCheckItems.map((item, index) => (
                     <div key={index} className={`flex items-center justify-between p-3 rounded border ${
-                      failedItems.includes(index) ? 'bg-red-50 border-red-200' : 'bg-background'
+                      failedItems.includes(index) ? 'bg-error-background border-error-border' : 'bg-background'
                     }`}>
                       <span className="text-sm font-medium flex items-center gap-2">
                         <span className="text-primary">★</span>
@@ -1707,23 +1706,23 @@ const InstallationReport = () => {
                       {/* Dynamic Status Display */}
                       <div className="p-4 border rounded-lg bg-card">
                         {allReceived ? (
-                          <div className="flex items-center gap-2 text-green-600">
+                          <div className="flex items-center gap-2 text-success">
                             <span className="text-2xl">✅</span>
                             <span className="font-semibold text-lg">All Accessories Received</span>
                           </div>
                         ) : (
                           <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-red-600">
+                            <div className="flex items-center gap-2 text-error">
                               <span className="text-2xl">❌</span>
                               <span className="font-semibold text-lg">Accessory Missing</span>
                             </div>
                             {missingAccessories.length > 0 && (
-                              <div className="bg-red-50 p-3 rounded border border-red-200">
-                                <p className="text-sm font-medium text-red-800 mb-2">Missing Accessories:</p>
-                                <ul className="text-sm text-red-700 space-y-1">
+                              <div className="bg-error-background p-3 rounded border border-error-border">
+                                <p className="text-sm font-medium text-error mb-2">Missing Accessories:</p>
+                                <ul className="text-sm text-error space-y-1">
                                   {missingAccessories.map(acc => (
                                     <li key={acc.key} className="flex items-start gap-2">
-                                      <span className="text-red-500 mt-0.5">•</span>
+                                      <span className="text-error mt-0.5">•</span>
                                       {acc.label}
                                     </li>
                                   ))}
@@ -1738,15 +1737,15 @@ const InstallationReport = () => {
                         {accessories.map(({ key, label }) => {
                           const isChecked = formData.serialNumbers[currentDeviceIndex]?.accessories?.[key] || false;
                           return (
-                            <div key={key} className={`flex items-center justify-between p-3 rounded border ${
-                              isChecked ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                           <div key={key} className={`flex items-center justify-between p-3 rounded border ${
+                              isChecked ? 'bg-success-background border-success-border' : 'bg-error-background border-error-border'
                             }`}>
                               <Label htmlFor={`accessory-${key}`} className="text-sm font-medium">
                                 {label}
                               </Label>
                               <div className="flex items-center gap-2">
-                                <span className={`text-xs font-medium ${
-                                  isChecked ? 'text-green-600' : 'text-red-600'
+                               <span className={`text-xs font-medium ${
+                                  isChecked ? 'text-success' : 'text-error'
                                 }`}>
                                   {isChecked ? 'Received' : 'Missing'}
                                 </span>

@@ -56,6 +56,18 @@ export default {
 				'form-header': 'hsl(var(--form-header))',
 				'table-header': 'hsl(var(--table-header))',
 				'checkbox-border': 'hsl(var(--checkbox-border))',
+				success: {
+					DEFAULT: 'hsl(var(--success))',
+					foreground: 'hsl(var(--success-foreground))',
+					background: 'hsl(var(--success-background))',
+					border: 'hsl(var(--success-border))'
+				},
+				error: {
+					DEFAULT: 'hsl(var(--error))',
+					foreground: 'hsl(var(--error-foreground))',
+					background: 'hsl(var(--error-background))',
+					border: 'hsl(var(--error-border))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',

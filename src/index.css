@@ -53,6 +53,17 @@ All colors MUST be HSL.
     --shadow-elegant: 0 10px 30px -10px hsl(220, 70%, 50% / 0.2);
     --shadow-soft: 0 2px 8px -2px hsl(220, 13%, 91% / 0.15);
 
+    /* Success/Error states for forms */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --success-background: 142 76% 97%;
+    --success-border: 142 76% 85%;
+    
+    --error: 0 84.2% 60.2%;
+    --error-foreground: 0 0% 100%;
+    --error-background: 0 84.2% 97%;
+    --error-border: 0 84.2% 85%;
+
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
@@ -96,6 +107,17 @@ All colors MUST be HSL.
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
+    
+    /* Dark mode success/error states */
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
+    --success-background: 142 76% 15%;
+    --success-border: 142 76% 25%;
+    
+    --error: 0 84.2% 65%;
+    --error-foreground: 0 0% 100%;
+    --error-background: 0 84.2% 15%;
+    --error-border: 0 84.2% 25%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
