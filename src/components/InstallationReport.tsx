@@ -32,13 +32,13 @@ const InstallationReport = () => {
     earthingRequired: "",
     installationType: "",
     accessories: {
-      stylus: false,
-      remote: false,
-      powerCable: false,
-      touchCable: false,
-      hdmiCable: false,
+      stylus: true,
+      remote: true,
+      powerCable: true,
+      touchCable: true,
+      hdmiCable: true,
     },
-    quickCheck: Array(16).fill(null),
+    quickCheck: Array(16).fill(true),
     engineerName: "",
     engineerContact: "",
     schoolOwnerEmail: "",
@@ -332,12 +332,8 @@ const InstallationReport = () => {
         }
       });
     }
-    // If preserveState is false (new scan), start with all items unchecked (all failed)
-    if (!preserveState) {
-      for (let i = 0; i < quickCheckItems.length; i++) {
-        currentFailedItems.push(i);
-      }
-    }
+    // If preserveState is false (new scan), start with all items checked (empty failedItems)
+    
     setFailedItems(currentFailedItems);
     setQcDialogOpen(true);
   };
@@ -382,11 +378,11 @@ const InstallationReport = () => {
     const updated = [...formData.serialNumbers];
     if (!updated[deviceIndex].accessories) {
       updated[deviceIndex].accessories = {
-        stylus: false,
-        remote: false,
-        powerCable: false,
-        touchCable: false,
-        hdmiCable: false,
+        stylus: true,
+        remote: true,
+        powerCable: true,
+        touchCable: true,
+        hdmiCable: true,
       };
     }
     updated[deviceIndex].accessories[accessoryKey] = checked;
