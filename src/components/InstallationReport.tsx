@@ -758,12 +758,13 @@ const InstallationReport = () => {
       return;
     }
 
-    // Clear saved data from localStorage on successful submission
+    // Note: Keeping signature state intact after submission so engineers can re-edit
+    // Only clear form data from localStorage, but preserve signature for re-editing
     clearSavedData();
     
     toast({
       title: "Report Submitted Successfully",
-      description: "Installation report has been submitted and saved",
+      description: "Installation report has been submitted. Digital signature remains editable.",
     });
   };
 
